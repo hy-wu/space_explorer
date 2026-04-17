@@ -2,10 +2,14 @@ import { create } from "zustand";
 import type { GraphData, GraphEdge, GraphNode } from "@/domain/graph";
 import {
   buildInteractiveSearchGraph,
+  type LocalSearchMode,
   type SearchHistoryEntry,
+  type SearchRequest,
   type SearchSession,
+  type SearchSource,
 } from "@/features/search/searchGraph";
-import { buildFileGraph } from "@/features/workspace/buildFileGraph";
+import { searchWikipedia } from "@/features/search/webSearch";
+import { buildFileGraph, enrichFileGraphWithContent } from "@/features/workspace/buildFileGraph";
 import { BrowserFileSystemAdapter } from "@/infrastructure/fs/browserFileSystemAdapter";
 import type { FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
 
@@ -24,10 +28,14 @@ type WorkspaceState = {
   importError: string | null;
   searchHistory: SearchHistoryEntry[];
   searchSession: SearchSession | null;
+  activeSearchSource: SearchSource;
+  activeLocalSearchMode: LocalSearchMode;
   selectNode: (nodeId: string) => void;
   pinNode: (nodeId: string, position: Position) => void;
+  setSearchSource: (source: SearchSource) => void;
+  setLocalSearchMode: (mode: LocalSearchMode) => void;
   importFolder: () => Promise<void>;
-  runSearch: (query: string) => void;
+  runSearch: (request: SearchRequest) => Promise<void>;
   clearSearch: () => void;
 };
 
@@ -136,6 +144,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   importError: null,
   searchHistory: [],
   searchSession: null,
+  activeSearchSource: "local-files",
+  activeLocalSearchMode: "semantic",
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   pinNode: (nodeId, position) =>
     set((state) => ({
@@ -164,6 +174,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
         ),
       },
     })),
+  setSearchSource: (source) => set({ activeSearchSource: source }),
+  setLocalSearchMode: (mode) => set({ activeLocalSearchMode: mode }),
   importFolder: async () => {
     if (!fileSystemAdapter.isSupported()) {
       set({
@@ -189,10 +201,40 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
       const files = await fileSystemAdapter.listFiles(folder);
       const graph = buildFileGraph(folder, files);
+      const textFriendlyExtensions = new Set([
+        "ts",
+        "tsx",
+        "js",
+        "jsx",
+        "json",
+        "md",
+        "txt",
+        "css",
+        "html",
+        "yml",
+        "yaml",
+      ]);
+      const fileContents = Object.fromEntries(
+        await Promise.all(
+          files.map(async (file) => {
+            if (!textFriendlyExtensions.has(file.extension.toLowerCase())) {
+              return [file.path, ""] as const;
+            }
+
+            try {
+              const content = await fileSystemAdapter.readText(file.path);
+              return [file.path, content] as const;
+            } catch {
+              return [file.path, ""] as const;
+            }
+          }),
+        ),
+      );
+      const enrichedGraph = enrichFileGraphWithContent(graph, fileContents);
 
       set({
-        baseGraph: graph,
-        graph,
+        baseGraph: enrichedGraph,
+        graph: enrichedGraph,
         activeFolder: folder,
         selectedNodeId: "workspace-root",
         isImportingFolder: false,
@@ -206,23 +248,36 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       });
     }
   },
-  runSearch: (query) =>
-    set((state) => {
-      const trimmed = query.trim();
-      if (!trimmed) {
-        return state;
-      }
+  runSearch: async (request) => {
+    const trimmed = request.query.trim();
+    if (!trimmed) {
+      return;
+    }
 
-      const next = buildInteractiveSearchGraph(state.baseGraph, trimmed, state.searchHistory);
+    const nextRequest: SearchRequest = {
+      ...request,
+      query: trimmed,
+    };
 
-      return {
+    const state = useWorkspaceStore.getState();
+    try {
+      const next = await buildInteractiveSearchGraph(state.baseGraph, nextRequest, state.searchHistory, {
+        searchWikipedia,
+      });
+
+      set({
         graph: next.graph,
         importError: null,
         searchHistory: next.session.history,
         searchSession: next.session,
         selectedNodeId: next.session.queryNodeId,
-      };
-    }),
+      });
+    } catch (error) {
+      set({
+        importError: error instanceof Error ? error.message : "Search failed.",
+      });
+    }
+  },
   clearSearch: () =>
     set((state) => ({
       graph: state.baseGraph,

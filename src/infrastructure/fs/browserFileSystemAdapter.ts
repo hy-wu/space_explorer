@@ -19,6 +19,7 @@ type DirectoryPickerWindow = Window &
 async function collectFiles(
   handle: BrowserDirectoryHandle,
   root = handle.name,
+  fileHandles?: Map<string, BrowserFileHandle>,
 ): Promise<FileEntry[]> {
   const files: FileEntry[] = [];
 
@@ -28,6 +29,7 @@ async function collectFiles(
     if (entry.kind === "file") {
       const file = await entry.getFile();
       const dotIndex = name.lastIndexOf(".");
+      fileHandles?.set(currentPath, entry);
       files.push({
         path: currentPath,
         name,
@@ -37,7 +39,7 @@ async function collectFiles(
       continue;
     }
 
-    files.push(...(await collectFiles(entry as BrowserDirectoryHandle, currentPath)));
+    files.push(...(await collectFiles(entry as BrowserDirectoryHandle, currentPath, fileHandles)));
   }
 
   return files;
@@ -45,6 +47,7 @@ async function collectFiles(
 
 export class BrowserFileSystemAdapter implements FileSystemAdapter {
   private currentHandle: BrowserDirectoryHandle | null = null;
+  private fileHandles = new Map<string, BrowserFileHandle>();
 
   isSupported(): boolean {
     const pickerWindow = window as DirectoryPickerWindow;
@@ -71,10 +74,17 @@ export class BrowserFileSystemAdapter implements FileSystemAdapter {
       return [];
     }
 
-    return collectFiles(this.currentHandle);
+    this.fileHandles.clear();
+    return collectFiles(this.currentHandle, this.currentHandle.name, this.fileHandles);
   }
 
   async readText(path: string): Promise<string> {
-    return `Reading "${path}" is not wired yet in the browser adapter.`;
+    const handle = this.fileHandles.get(path);
+    if (!handle) {
+      return "";
+    }
+
+    const file = await handle.getFile();
+    return file.text();
   }
 }

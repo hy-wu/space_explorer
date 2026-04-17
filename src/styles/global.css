@@ -150,6 +150,25 @@ input {
   gap: 8px;
 }
 
+.search-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mode-chip {
+  padding: 0.5rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #dbeafe;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.mode-chip--active {
+  background: linear-gradient(135deg, #22d3ee, #34d399);
+  color: #041018;
+}
+
 .searchbar {
   display: grid;
   grid-template-columns: minmax(280px, 520px) auto;
@@ -286,6 +305,11 @@ input {
   background: rgba(15, 23, 42, 0.62);
   color: #dbeafe;
   border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.history-chip em {
+  font-style: normal;
+  color: #7dd3fc;
 }
 
 @media (max-width: 1200px) {

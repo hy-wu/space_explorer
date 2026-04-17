@@ -179,3 +179,30 @@ export function buildFileGraph(folder: FolderHandle, files: FileEntry[]): GraphD
 
   return { nodes, edges };
 }
+
+export function enrichFileGraphWithContent(
+  graph: GraphData,
+  fileContents: Record<string, string>,
+): GraphData {
+  return {
+    ...graph,
+    nodes: graph.nodes.map((node) => {
+      if (node.kind !== "file") {
+        return node;
+      }
+
+      const path = typeof node.meta.path === "string" ? node.meta.path : "";
+      const content = fileContents[path] ?? "";
+      const compact = content.replace(/\s+/g, " ").trim();
+
+      return {
+        ...node,
+        meta: {
+          ...node.meta,
+          content,
+          contentPreview: compact.slice(0, 300),
+        },
+      };
+    }),
+  };
+}

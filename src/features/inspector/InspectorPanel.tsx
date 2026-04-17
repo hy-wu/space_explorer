@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { getNodeDisplayTitle } from "@/features/workspace/nodeDisplay";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
 type InspectorPanelProps = {
@@ -25,7 +26,7 @@ export function InspectorPanel({ selectedNodeId }: InspectorPanelProps) {
   return (
     <section className="panel">
       <p className="panel__title">Inspector</p>
-      <h2>{node.title}</h2>
+      <h2>{getNodeDisplayTitle(node)}</h2>
       <dl className="meta-list">
         <div>
           <dt>Kind</dt>

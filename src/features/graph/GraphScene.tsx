@@ -2,6 +2,7 @@ import ForceGraph3D from "react-force-graph-3d";
 import SpriteText from "three-spritetext";
 import { useMemo } from "react";
 import type { GraphEdge, GraphNode } from "@/domain/graph";
+import { getNodeDisplayTitle } from "@/features/workspace/nodeDisplay";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
 type ForceGraphNode = GraphNode & {
@@ -47,13 +48,13 @@ export function GraphScene() {
       }}
       nodeLabel={(node) => {
         const typedNode = node as GraphNode;
-        return `${typedNode.title} (${typedNode.kind})`;
+        return `${getNodeDisplayTitle(typedNode)} (${typedNode.kind})`;
       }}
       nodeAutoColorBy="kind"
       nodeVal={(node: object) => 6 + (((node as GraphNode).score as number | undefined) ?? 0) * 10}
       nodeThreeObject={(node: object) => {
         const typedNode = node as GraphNode;
-        const sprite = new SpriteText(typedNode.title);
+        const sprite = new SpriteText(getNodeDisplayTitle(typedNode));
         sprite.color = "#e5f0ff";
         sprite.textHeight = 7;
         return sprite;

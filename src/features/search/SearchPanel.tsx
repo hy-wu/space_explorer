@@ -3,22 +3,30 @@ import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export function SearchPanel() {
   const [query, setQuery] = useState("");
-  const runDemoSearch = useWorkspaceStore((state) => state.runDemoSearch);
+  const searchSession = useWorkspaceStore((state) => state.searchSession);
+  const runSearch = useWorkspaceStore((state) => state.runSearch);
 
   return (
-    <form
-      className="searchbar"
-      onSubmit={(event) => {
-        event.preventDefault();
-        runDemoSearch(query || "graph IDE");
-      }}
-    >
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Visualize a query like: graph IDE, RAG tutorial, paper cluster..."
-      />
-      <button type="submit">Map Search</button>
-    </form>
+    <div className="search-shell">
+      <form
+        className="searchbar"
+        onSubmit={(event) => {
+          event.preventDefault();
+          runSearch(query || "graph IDE");
+        }}
+      >
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search this graph: tsx files, graph IDE notes, tutorial clusters..."
+        />
+        <button type="submit">Search Graph</button>
+      </form>
+      <p className="search-hint">
+        {searchSession
+          ? `Active query: ${searchSession.query}`
+          : "Query creates a search hub, result nodes, similarity edges, and an AI summary node."}
+      </p>
+    </div>
   );
 }

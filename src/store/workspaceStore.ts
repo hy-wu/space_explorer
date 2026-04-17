@@ -1,6 +1,10 @@
 import { create } from "zustand";
-import type { GraphData, GraphEdge, GraphNode, RelationKind } from "@/domain/graph";
-import { applyRadialQueryLayout } from "@/domain/layout";
+import type { GraphData, GraphEdge, GraphNode } from "@/domain/graph";
+import {
+  buildInteractiveSearchGraph,
+  type SearchHistoryEntry,
+  type SearchSession,
+} from "@/features/search/searchGraph";
 import { buildFileGraph } from "@/features/workspace/buildFileGraph";
 import { BrowserFileSystemAdapter } from "@/infrastructure/fs/browserFileSystemAdapter";
 import type { FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
@@ -12,15 +16,19 @@ type Position = {
 };
 
 type WorkspaceState = {
+  baseGraph: GraphData;
   graph: GraphData;
   selectedNodeId: string | null;
   activeFolder: FolderHandle | null;
   isImportingFolder: boolean;
   importError: string | null;
+  searchHistory: SearchHistoryEntry[];
+  searchSession: SearchSession | null;
   selectNode: (nodeId: string) => void;
   pinNode: (nodeId: string, position: Position) => void;
   importFolder: () => Promise<void>;
-  runDemoSearch: (query: string) => void;
+  runSearch: (query: string) => void;
+  clearSearch: () => void;
 };
 
 const fileSystemAdapter = new BrowserFileSystemAdapter();
@@ -42,7 +50,9 @@ const seedNodes: GraphNode[] = [
     tags: ["local", "code"],
     meta: {
       path: "/workspace/src",
+      depth: 1,
     },
+    position: { x: -80, y: -100, z: 20 },
   },
   {
     id: "file-app",
@@ -51,7 +61,9 @@ const seedNodes: GraphNode[] = [
     tags: ["typescript", "ui"],
     meta: {
       path: "/workspace/src/App.tsx",
+      extension: "tsx",
     },
+    position: { x: -120, y: -180, z: 140 },
   },
   {
     id: "symbol-graph-scene",
@@ -62,15 +74,17 @@ const seedNodes: GraphNode[] = [
       file: "App.tsx",
       exported: true,
     },
+    position: { x: 40, y: -180, z: 160 },
   },
   {
     id: "note-vision",
     kind: "note",
     title: "Vision notes",
-    tags: ["product", "idea"],
+    tags: ["product", "idea", "graph", "ide"],
     meta: {
       summary: "Graph-native browser/OS/IDE concept.",
     },
+    position: { x: 120, y: 20, z: 80 },
   },
 ];
 
@@ -108,128 +122,35 @@ const seedEdges: GraphEdge[] = [
   },
 ];
 
-function createSearchGraph(query: string): GraphData {
-  const queryNode: GraphNode = {
-    id: "search-query",
-    kind: "search_query",
-    title: query,
-    tags: ["query"],
-    score: 1,
-    meta: {
-      createdAt: new Date().toISOString(),
-      mode: "demo-search",
-    },
-  };
-
-  const resultNodes: GraphNode[] = [
-    {
-      id: "result-1",
-      kind: "search_result",
-      title: "3D knowledge workspace patterns",
-      tags: ["ux", "graph"],
-      score: 0.96,
-      meta: {
-        source: "tutorial",
-        why: "Strong match on graph-native workspace interaction.",
-      },
-    },
-    {
-      id: "result-2",
-      kind: "search_result",
-      title: "Codebase visualization with symbol graphs",
-      tags: ["code", "graph"],
-      score: 0.89,
-      meta: {
-        source: "paper",
-        why: "Relevant to IDE and structure visualization.",
-      },
-    },
-    {
-      id: "result-3",
-      kind: "search_result",
-      title: "Local-first note and document graph",
-      tags: ["notes", "storage"],
-      score: 0.84,
-      meta: {
-        source: "article",
-        why: "Relevant to unifying notes and files in one graph.",
-      },
-    },
-    {
-      id: "answer-1",
-      kind: "ai_answer",
-      title: "AI synthesis",
-      tags: ["answer"],
-      score: 0.91,
-      meta: {
-        summary:
-          "Use a query anchor, cluster results by similarity, and keep dragged positions as persistent user intent.",
-      },
-    },
-  ];
-
-  const edges: GraphEdge[] = [
-    ...resultNodes.map<GraphEdge>((node, index) => {
-      const kind: RelationKind = node.kind === "ai_answer" ? "answers" : "related_to";
-
-      return {
-        id: `edge-query-${node.id}`,
-        source: "search-query",
-        target: node.id,
-        kind,
-        weight: 1 - index * 0.1,
-        meta: {},
-      };
-    }),
-    {
-      id: "edge-result-1-2",
-      source: "result-1",
-      target: "result-2",
-      kind: "similar_to",
-      weight: 0.88,
-      meta: {},
-    },
-    {
-      id: "edge-result-1-3",
-      source: "result-1",
-      target: "result-3",
-      kind: "similar_to",
-      weight: 0.64,
-      meta: {},
-    },
-    {
-      id: "edge-result-2-answer",
-      source: "result-2",
-      target: "answer-1",
-      kind: "generated_from",
-      weight: 0.7,
-      meta: {},
-    },
-  ];
-
-  const graph = {
-    nodes: [queryNode, ...resultNodes],
-    edges,
-  };
-
-  return {
-    ...graph,
-    nodes: applyRadialQueryLayout(graph, queryNode.id),
-  };
-}
+const seedGraph: GraphData = {
+  nodes: seedNodes,
+  edges: seedEdges,
+};
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
-  graph: {
-    nodes: seedNodes,
-    edges: seedEdges,
-  },
+  baseGraph: seedGraph,
+  graph: seedGraph,
   selectedNodeId: "workspace-root",
   activeFolder: null,
   isImportingFolder: false,
   importError: null,
+  searchHistory: [],
+  searchSession: null,
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   pinNode: (nodeId, position) =>
     set((state) => ({
+      baseGraph: {
+        ...state.baseGraph,
+        nodes: state.baseGraph.nodes.map((node) =>
+          node.id === nodeId
+            ? {
+                ...node,
+                pinned: true,
+                position,
+              }
+            : node,
+        ),
+      },
       graph: {
         ...state.graph,
         nodes: state.graph.nodes.map((node) =>
@@ -270,11 +191,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       const graph = buildFileGraph(folder, files);
 
       set({
+        baseGraph: graph,
         graph,
         activeFolder: folder,
         selectedNodeId: "workspace-root",
         isImportingFolder: false,
         importError: null,
+        searchSession: null,
       });
     } catch (error) {
       set({
@@ -283,10 +206,27 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       });
     }
   },
-  runDemoSearch: (query) =>
-    set({
-      graph: createSearchGraph(query),
-      selectedNodeId: "search-query",
-      importError: null,
+  runSearch: (query) =>
+    set((state) => {
+      const trimmed = query.trim();
+      if (!trimmed) {
+        return state;
+      }
+
+      const next = buildInteractiveSearchGraph(state.baseGraph, trimmed, state.searchHistory);
+
+      return {
+        graph: next.graph,
+        importError: null,
+        searchHistory: next.session.history,
+        searchSession: next.session,
+        selectedNodeId: next.session.queryNodeId,
+      };
     }),
+  clearSearch: () =>
+    set((state) => ({
+      graph: state.baseGraph,
+      searchSession: null,
+      selectedNodeId: state.baseGraph.nodes[0]?.id ?? null,
+    })),
 }));

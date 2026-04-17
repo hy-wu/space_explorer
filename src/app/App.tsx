@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { InspectorPanel } from "@/features/inspector/InspectorPanel";
 import { SearchPanel } from "@/features/search/SearchPanel";
+import { SearchResultsPanel } from "@/features/search/SearchResultsPanel";
 import { WorkspaceSidebar } from "@/features/workspace/WorkspaceSidebar";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
@@ -33,6 +34,7 @@ export function App() {
         </section>
       </main>
       <aside className="shell__right">
+        <SearchResultsPanel />
         <InspectorPanel selectedNodeId={selectedNode} />
       </aside>
     </div>

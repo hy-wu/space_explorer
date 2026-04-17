@@ -12,6 +12,7 @@ export type FileEntry = {
 };
 
 export interface FileSystemAdapter {
+  isSupported(): boolean;
   pickFolder(): Promise<FolderHandle | null>;
   listFiles(folder: FolderHandle): Promise<FileEntry[]>;
   readText(path: string): Promise<string>;

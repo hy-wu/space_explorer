@@ -44,6 +44,13 @@ async function collectFiles(
 }
 
 export class BrowserFileSystemAdapter implements FileSystemAdapter {
+  private currentHandle: BrowserDirectoryHandle | null = null;
+
+  isSupported(): boolean {
+    const pickerWindow = window as DirectoryPickerWindow;
+    return Boolean(pickerWindow.showDirectoryPicker);
+  }
+
   async pickFolder(): Promise<FolderHandle | null> {
     const pickerWindow = window as DirectoryPickerWindow;
     if (!pickerWindow.showDirectoryPicker) {
@@ -51,6 +58,7 @@ export class BrowserFileSystemAdapter implements FileSystemAdapter {
     }
 
     const handle = await pickerWindow.showDirectoryPicker();
+    this.currentHandle = handle;
 
     return {
       id: handle.name,
@@ -59,17 +67,11 @@ export class BrowserFileSystemAdapter implements FileSystemAdapter {
   }
 
   async listFiles(folder: FolderHandle): Promise<FileEntry[]> {
-    const pickerWindow = window as DirectoryPickerWindow;
-    if (!pickerWindow.showDirectoryPicker) {
+    if (!this.currentHandle || this.currentHandle.name !== folder.name) {
       return [];
     }
 
-    const handle = await pickerWindow.showDirectoryPicker();
-    if (handle.name !== folder.name) {
-      return [];
-    }
-
-    return collectFiles(handle);
+    return collectFiles(this.currentHandle);
   }
 
   async readText(path: string): Promise<string> {

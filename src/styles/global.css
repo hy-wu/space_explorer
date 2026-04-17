@@ -39,6 +39,11 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 input {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.22);
@@ -124,6 +129,10 @@ input {
 
 .muted {
   color: #93a8bf;
+}
+
+.error-text {
+  color: #fca5a5;
 }
 
 .searchbar {

@@ -2,6 +2,10 @@ import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export function WorkspaceSidebar() {
   const graph = useWorkspaceStore((state) => state.graph);
+  const activeFolder = useWorkspaceStore((state) => state.activeFolder);
+  const isImportingFolder = useWorkspaceStore((state) => state.isImportingFolder);
+  const importError = useWorkspaceStore((state) => state.importError);
+  const importFolder = useWorkspaceStore((state) => state.importFolder);
 
   const counts = graph.nodes.reduce<Record<string, number>>((accumulator, node) => {
     accumulator[node.kind] = (accumulator[node.kind] ?? 0) + 1;
@@ -15,6 +19,13 @@ export function WorkspaceSidebar() {
       <p className="muted">
         Tabs, files, code symbols, notes, papers, and answers all live in one graph.
       </p>
+      <button type="button" onClick={() => void importFolder()} disabled={isImportingFolder}>
+        {isImportingFolder ? "Importing folder..." : "Choose Folder"}
+      </button>
+      <p className="muted">
+        {activeFolder ? `Current folder: ${activeFolder.name}` : "No folder connected yet."}
+      </p>
+      {importError ? <p className="error-text">{importError}</p> : null}
       <div className="stat-grid">
         <div>
           <span>Nodes</span>

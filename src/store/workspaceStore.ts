@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { GraphData, GraphEdge, GraphNode, RelationKind } from "@/domain/graph";
 import { applyRadialQueryLayout } from "@/domain/layout";
+import { buildFileGraph } from "@/features/workspace/buildFileGraph";
+import { BrowserFileSystemAdapter } from "@/infrastructure/fs/browserFileSystemAdapter";
+import type { FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
 
 type Position = {
   x: number;
@@ -11,10 +14,16 @@ type Position = {
 type WorkspaceState = {
   graph: GraphData;
   selectedNodeId: string | null;
+  activeFolder: FolderHandle | null;
+  isImportingFolder: boolean;
+  importError: string | null;
   selectNode: (nodeId: string) => void;
   pinNode: (nodeId: string, position: Position) => void;
+  importFolder: () => Promise<void>;
   runDemoSearch: (query: string) => void;
 };
+
+const fileSystemAdapter = new BrowserFileSystemAdapter();
 
 const seedNodes: GraphNode[] = [
   {
@@ -215,6 +224,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     edges: seedEdges,
   },
   selectedNodeId: "workspace-root",
+  activeFolder: null,
+  isImportingFolder: false,
+  importError: null,
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   pinNode: (nodeId, position) =>
     set((state) => ({
@@ -231,9 +243,50 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
         ),
       },
     })),
+  importFolder: async () => {
+    if (!fileSystemAdapter.isSupported()) {
+      set({
+        importError: "This browser does not support folder picking yet. Chrome or Edge is recommended for the MVP.",
+      });
+      return;
+    }
+
+    set({
+      isImportingFolder: true,
+      importError: null,
+    });
+
+    try {
+      const folder = await fileSystemAdapter.pickFolder();
+      if (!folder) {
+        set({
+          isImportingFolder: false,
+          importError: "Folder selection was cancelled.",
+        });
+        return;
+      }
+
+      const files = await fileSystemAdapter.listFiles(folder);
+      const graph = buildFileGraph(folder, files);
+
+      set({
+        graph,
+        activeFolder: folder,
+        selectedNodeId: "workspace-root",
+        isImportingFolder: false,
+        importError: null,
+      });
+    } catch (error) {
+      set({
+        isImportingFolder: false,
+        importError: error instanceof Error ? error.message : "Failed to import folder.",
+      });
+    }
+  },
   runDemoSearch: (query) =>
     set({
       graph: createSearchGraph(query),
       selectedNodeId: "search-query",
+      importError: null,
     }),
 }));

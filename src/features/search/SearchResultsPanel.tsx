@@ -65,7 +65,25 @@ export function SearchResultsPanel() {
                 className={`search-result-card${selectedNodeId === node.id ? " search-result-card--active" : ""}`}
                 onClick={() => selectNode(node.id)}
               >
-                <span className="search-result-card__title">{getNodeDisplayTitle(node)}</span>
+                <span className="search-result-card__title">
+                  {getNodeDisplayTitle(node)}
+                  {node.meta.explanation ? null : <button
+                    type="button"
+                    className="ghost-search-button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      // alert(String(searchSession.source) + " " + String(searchSession.mode));
+                      void runSearch({
+                        source: searchSession.source,
+                        mode: searchSession.mode,
+                        query: String(node.title),
+                        baseNodeId: node.id,
+                      });
+                    }}
+                  >
+                    {"🔍"}
+                  </button>}
+                </span>
                 <span className="search-result-card__meta">
                   {String(node.meta.originalKind ?? "unknown")} · score {(node.score ?? 0).toFixed(2)}
                 </span>

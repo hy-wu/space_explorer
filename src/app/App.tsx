@@ -24,7 +24,7 @@ export function App() {
           <div>
             <p className="eyebrow">Graph-first browser / OS / IDE</p>
             <h1>Graph Workspace</h1>
-            <p className="sub_note">On blank: Left-click: rotate, Right-click: pan. On web node: Right-click: open.</p>
+            <p className="sub_note">On blank: Left-click: rotate, Right-click: pan. On web node: Right-click: open, Double-left-click: search.</p>
           </div>
           <SearchPanel />
         </header>

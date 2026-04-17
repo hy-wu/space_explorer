@@ -30,6 +30,7 @@ export type SearchRequest = {
   source: SearchSource;
   mode: LocalSearchMode | null;
   query: string;
+  baseNodeId?: string;
 };
 
 export type WebSearchResult = {
@@ -203,13 +204,34 @@ function sanitizeBaseGraph(graph: GraphData): GraphData {
 }
 
 function placeSearchNodes(baseGraph: GraphData, searchNodes: GraphNode[]): GraphNode[] {
-  const queryNode = searchNodes.find((node) => node.kind === "search_query");
-  if (!queryNode) {
-    return searchNodes;
-  }
-
+  // const queryNode = searchNodes.find((node) => node.kind === "search_query");
+  // if (!queryNode) {
+  //   return searchNodes;
+  // }
+  const queryNode = searchNodes[0];
+  
   const candidates = searchNodes.filter((node) => node.id !== queryNode.id);
   const baseWidth = Math.max(baseGraph.nodes.length, 1) * 12;
+  if (queryNode.kind !== "search_query") {  // TODO: more robust way to determine if this is a sub-search or a top-level search
+    const anchorX = queryNode.position?.x ?? baseWidth + 260;
+    const anchorY = queryNode.position?.y ?? -40;
+    return searchNodes.filter((node) => node.id !== queryNode.id).map((node) => {
+      const index = candidates.findIndex((candidate) => candidate.id === node.id);
+      const ring = 100 + index * 30 - (node.score ?? 0) * 50;
+      const angle = (index / Math.max(candidates.length, 1)) * Math.PI * 2;
+      const vertical = node.kind === "ai_answer" ? -110 : ((index % 3) - 1) * 60;
+
+      return {
+        ...node,
+        position: {
+          x: anchorX + Math.cos(angle) * ring,
+          y: anchorY + vertical,
+          z: Math.sin(angle) * ring,
+        },
+      };
+    });
+  }
+
   const anchorX = baseWidth + 260;
   const anchorY = -40;
 
@@ -419,11 +441,14 @@ function createWikipediaSearchGraph(
   history: SearchHistoryEntry[],
   results: WebSearchResult[],
 ): SearchBuildResult {
-  const baseGraph = sanitizeBaseGraph(graph);
+  const baseGraph = request.baseNodeId ? graph : sanitizeBaseGraph(graph);
   const createdAt = new Date().toISOString();
-  const queryNodeId = `search-query:${createdAt}`;
-
-  const queryNode: GraphNode = {
+  const queryNodeId = request.baseNodeId ?? `search-query:${createdAt}`;
+  
+  // TODO: if request.baseNodeId is provided, consider linking the query node to the base node with a "related_to" edge
+  // TODO: efficiency of getting the query node by id
+  // TODO: exclude duplicated resultNodes
+  const queryNode: GraphNode = graph.nodes.find((node) => node.id === queryNodeId) ?? {
     id: queryNodeId,
     kind: "search_query",
     title: request.query,

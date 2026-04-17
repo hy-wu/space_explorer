@@ -261,7 +261,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
     const state = useWorkspaceStore.getState();
     try {
-      const next = await buildInteractiveSearchGraph(state.baseGraph, nextRequest, state.searchHistory, {
+      const next = await buildInteractiveSearchGraph(request.baseNodeId?state.graph:state.baseGraph, nextRequest, state.searchHistory, {
         searchWikipedia,
       });
 

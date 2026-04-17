@@ -244,6 +244,14 @@ input {
   border: 1px solid rgba(125, 211, 252, 0.16);
 }
 
+.ghost-search-button {
+  background: none;
+  color: #dbeafe;
+  padding: 0.2rem 0.3rem;
+  margin: 0 1rem;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+}
+
 .search-answer-card {
   margin: 1rem 0;
   padding: 1rem;

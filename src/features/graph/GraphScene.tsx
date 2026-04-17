@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { GraphEdge, GraphNode } from "@/domain/graph";
 import { getNodeDisplayTitle } from "@/features/workspace/nodeDisplay";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { string } from "zod/v4";
 
 type ForceGraphNode = GraphNode & {
   x?: number;
@@ -43,6 +44,7 @@ export function GraphScene() {
   const searchSession = useWorkspaceStore((state) => state.searchSession);
   const selectNode = useWorkspaceStore((state) => state.selectNode);
   const pinNode = useWorkspaceStore((state) => state.pinNode);
+  const runSearch = useWorkspaceStore((state) => state.runSearch);
 
   const searchRelatedNodeIds = useMemo(() => {
     if (!searchSession) {
@@ -118,7 +120,27 @@ export function GraphScene() {
         sprite.textHeight = 7;
         return sprite;
       }}
-      onNodeClick={(node: object) => selectNode((node as GraphNode).id)}
+      // onNodeClick={(node: object) => selectNode((node as GraphNode).id)}
+      onNodeClick={(node, event) => {
+        selectNode((node as GraphNode).id)
+        if (node.lastClick) {
+		      if (event.timeStamp - node.lastClick < 500) {
+            if (searchSession && !searchSession.mode && typeof node.id === "string") {
+              void runSearch({
+                source: searchSession.source,
+                mode: searchSession.mode,
+                query: String(node.title),
+                baseNodeId: node.id,
+              });
+            }
+            delete node.lastClick;
+          } else {
+            node.lastClick = event.timeStamp;
+          }
+        } else {
+          node.lastClick = event.timeStamp;
+        }
+      }}
       onNodeDragEnd={(node: object) => {
         const dragged = node as ForceGraphNode;
         pinNode(dragged.id, {

@@ -127,6 +127,15 @@ export function GraphScene() {
           z: dragged.z ?? 0,
         });
       }}
+      onNodeRightClick={(node: object) => {
+        const typedNode = node as GraphNode;
+        const nodeUrl = typedNode.uri;
+        if (typeof nodeUrl === "string") { 
+          if (nodeUrl.startsWith("http")) {
+            window.open(nodeUrl, "_blank");
+          }
+        }
+      }}
     />
   );
 }

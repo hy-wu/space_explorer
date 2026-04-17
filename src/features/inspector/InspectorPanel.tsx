@@ -44,8 +44,8 @@ export function InspectorPanel({ selectedNodeId }: InspectorPanelProps) {
           <dt>Score</dt>
           <dd>{node.score ?? "n/a"}</dd>
         </div>
-      </dl>
       <pre className="json-card">{JSON.stringify(node.meta, null, 2)}</pre>
+      </dl>
     </section>
   );
 }

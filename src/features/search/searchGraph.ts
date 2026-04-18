@@ -525,10 +525,6 @@ function createWebSearchGraph(
     ? `${sourceLabel(request.source)} search found ${results.length} results for "${request.query}". Start from the closest nodes and inspect their snippets.`
     : `${sourceLabel(request.source)} search returned no results for "${request.query}".`;
 
-  if (request.source === "duckduckgo" && results.length === 0) {
-    summary += " Note: DuckDuckGo API focuses on 'Instant Answers'. For broader web searches, try 'Web Search (SearXNG)'.";
-  }
-
   const answerNode: GraphNode = {
     id: answerNodeId,
     kind: "ai_answer",
@@ -646,4 +642,3 @@ export function getSearchSourceLabel(source: SearchSource): string {
 export function getLocalSearchModeLabel(mode: LocalSearchMode | null): string {
   return modeLabel(mode);
 }
-

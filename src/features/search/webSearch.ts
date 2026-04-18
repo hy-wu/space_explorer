@@ -64,52 +64,26 @@ export async function searchArXiv(query: string): Promise<WebSearchResult[]> {
 }
 
 export async function searchDuckDuckGo(query: string): Promise<WebSearchResult[]> {
-  const url = new URL("https://api.duckduckgo.com/");
+  // TODO: replace with actual backend API endpoint in production
+  const url = new URL("http://127.0.0.1:8000/api/search/duckduckgo");
   url.searchParams.set("q", query);
-  url.searchParams.set("format", "json");
-  url.searchParams.set("no_html", "1");
-  url.searchParams.set("skip_disambig", "1");
+  url.searchParams.set("max_results", "6");
 
-  alert(url.toString());
   const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error(`DuckDuckGo search failed with status ${response.status}.`);
   }
 
   const data = await response.json();
-  const results: WebSearchResult[] = [];
-
-  alert(JSON.stringify(data, null, 2));
-
-  if (data.AbstractText) {
-    results.push({
-      title: data.Heading || query,
-      snippet: data.AbstractText,
-      url: data.AbstractURL || "",
-    });
+  alert(`DuckDuckGo API response: ${JSON.stringify(data)}`);  
+  if (data.error) {
+    throw new Error(`DuckDuckGo backend error: ${data.error}`);
   }
-
-  const processTopic = (topic: any) => {
-    if (results.length >= 10) return;
-    if (topic.Text && topic.FirstURL) {
-      results.push({
-        title: topic.FirstURL.split("/").pop()?.replace(/_/g, " ") || topic.Text.slice(0, 40),
-        snippet: topic.Text,
-        url: topic.FirstURL,
-      });
-    }
-    if (topic.Topics && Array.isArray(topic.Topics)) {
-      topic.Topics.forEach(processTopic);
-    }
-  };
-
-  if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
-    data.RelatedTopics.forEach(processTopic);
-  }
-
-  return results;
+  
+  return data as WebSearchResult[];
 }
 
+// FIX
 export async function searchSearXNG(query: string): Promise<WebSearchResult[]> {
   // Using a popular public instance. In production, users might want to configure their own.
   const url = new URL("https://searx.be/search");
@@ -117,7 +91,11 @@ export async function searchSearXNG(query: string): Promise<WebSearchResult[]> {
   url.searchParams.set("format", "json");
   url.searchParams.set("categories", "general");
 
-  const response = await fetch(url.toString());
+  // corsproxy.io 常常被 searx.be 识别为爬虫并拦截 (403)。这里换用 allorigins 代理。
+  // （提示：公共 SearXNG 实例极其不稳定，生产环境中建议自建 SearXNG 服务）
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url.toString())}`;
+  const response = await fetch(proxyUrl);
+
   if (!response.ok) {
     throw new Error(`SearXNG search failed with status ${response.status}.`);
   }
@@ -149,6 +127,7 @@ export async function searchHackerNews(query: string): Promise<WebSearchResult[]
   }));
 }
 
+// FIX
 export async function searchSemanticScholar(query: string): Promise<WebSearchResult[]> {
   const url = new URL("https://api.semanticscholar.org/graph/v1/paper/search");
   url.searchParams.set("query", query);
@@ -168,6 +147,7 @@ export async function searchSemanticScholar(query: string): Promise<WebSearchRes
   }));
 }
 
+// FIX
 export async function searchGoogleBooks(query: string): Promise<WebSearchResult[]> {
   const url = new URL("https://www.googleapis.com/books/v1/volumes");
   url.searchParams.set("q", query);

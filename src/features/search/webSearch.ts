@@ -36,7 +36,9 @@ export async function searchArXiv(query: string): Promise<WebSearchResult[]> {
 
   alert(`ArXiv API request URL: ${url.toString()}`);
 
-  const response = await fetch(url.toString());
+  // OPTIMIZE: using CORS proxy to avoid CORS issues in the browser; in production, consider implementing a backend proxy for better reliability and security
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url.toString())}`;
+  const response = await fetch(proxyUrl);
 
   alert(`ArXiv API response status: ${response.status}`);
 

@@ -216,7 +216,7 @@ function placeSearchNodes(baseGraph: GraphData, searchNodes: GraphNode[]): Graph
   
   const candidates = searchNodes.filter((node) => node.id !== queryNode.id);
   const baseWidth = Math.max(baseGraph.nodes.length, 1) * 12;
-  if (queryNode.kind !== "search_query") {  // TODO: more robust way to determine if this is a sub-search or a top-level search
+  if (queryNode.kind !== "search_query") {  // TODO: HACK: more robust way to determine if this is a sub-search or a top-level search
     const anchorX = queryNode.position?.x ?? baseWidth + 260;
     const anchorY = queryNode.position?.y ?? -40;
     return searchNodes.filter((node) => node.id !== queryNode.id).map((node) => {

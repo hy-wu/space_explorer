@@ -37,7 +37,7 @@ export function SearchPanel() {
             <button
               key={mode}
               type="button"
-              className={`mode-chip${activeLocalSearchMode === mode ? " mode-chip--active" : ""}`}
+              className={`submode-chip${activeLocalSearchMode === mode ? " submode-chip--active" : ""}`}
               onClick={() => setLocalSearchMode(mode)}
             >
               {getLocalSearchModeLabel(mode)}

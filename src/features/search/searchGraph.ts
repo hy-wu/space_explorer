@@ -1,6 +1,6 @@
 import type { GraphData, GraphEdge, GraphNode } from "@/domain/graph";
 
-export const searchSources = ["local-files", "wikipedia"] as const;
+export const searchSources = ["local-files", "wikipedia", "duckduckgo", "arxiv", "openalex", "crossref"] as const;  // TODO: "duckduckgo", "arxiv"
 export const localSearchModes = ["name", "semantic", "content", "keywords"] as const;
 
 export type SearchSource = (typeof searchSources)[number];
@@ -41,6 +41,10 @@ export type WebSearchResult = {
 
 export type SearchGraphDependencies = {
   searchWikipedia: (query: string) => Promise<WebSearchResult[]>;
+  searchArXiv: (query: string) => Promise<WebSearchResult[]>;
+  searchDuckDuckGo: (query: string) => Promise<WebSearchResult[]>;
+  searchOpenAlex: (query: string) => Promise<WebSearchResult[]>;
+  searchCrossref: (query: string) => Promise<WebSearchResult[]>;
 };
 
 type SearchBuildResult = {
@@ -260,7 +264,22 @@ function placeSearchNodes(baseGraph: GraphData, searchNodes: GraphNode[]): Graph
 }
 
 function sourceLabel(source: SearchSource): string {
-  return source === "local-files" ? "local files" : "Wikipedia";
+  switch (source) {
+    case "local-files":
+      return "local files";
+    case "wikipedia":
+      return "Wikipedia";
+    case "duckduckgo":
+      return "DuckDuckGo";
+    case "arxiv":
+      return "ArXiv";
+    case "openalex":
+      return "OpenAlex";
+    case "crossref":
+      return "Crossref";
+    default:
+      return source;
+  }
 }
 
 function modeLabel(mode: LocalSearchMode | null): string {
@@ -435,7 +454,7 @@ function createLocalSearchGraph(
   };
 }
 
-function createWikipediaSearchGraph(
+function createWebSearchGraph(
   graph: GraphData,
   request: SearchRequest,
   history: SearchHistoryEntry[],
@@ -445,9 +464,6 @@ function createWikipediaSearchGraph(
   const createdAt = new Date().toISOString();
   const queryNodeId = request.baseNodeId ?? `search-query:${createdAt}`;
   
-  // TODO: if request.baseNodeId is provided, consider linking the query node to the base node with a "related_to" edge
-  // TODO: efficiency of getting the query node by id
-  // TODO: exclude duplicated resultNodes
   const queryNode: GraphNode = graph.nodes.find((node) => node.id === queryNodeId) ?? {
     id: queryNodeId,
     kind: "search_query",
@@ -463,15 +479,15 @@ function createWikipediaSearchGraph(
   };
 
   const resultNodes: GraphNode[] = results.slice(0, 6).map((result, index) => ({
-    id: `search-result:wikipedia:${index}:${createdAt}`,
+    id: `search-result:${request.source}:${index}:${createdAt}`,
     kind: "search_result",
     title: result.title,
     uri: result.url,
-    tags: ["wikipedia", "web", "search-result"],
+    tags: [request.source, "web", "search-result"],
     score: Math.max(0.35, 0.92 - index * 0.08),
     meta: {
       explanation: result.snippet,
-      originalKind: "wikipedia_result",
+      originalKind: `${request.source}_result`,
       originalNodeId: result.url,
       rank: index + 1,
       source: request.source,
@@ -485,14 +501,14 @@ function createWikipediaSearchGraph(
   const answerNode: GraphNode = {
     id: answerNodeId,
     kind: "ai_answer",
-    title: "Wikipedia synthesis",
+    title: `${sourceLabel(request.source)} synthesis`,
     tags: ["answer", "summary", request.source],
     score: resultNodes[0]?.score ?? 0.5,
     meta: {
       summary:
         resultNodes.length > 0
-          ? `Wikipedia search found ${resultNodes.length} results for "${request.query}". Start from the closest nodes and inspect their snippets.`
-          : `Wikipedia search returned no results for "${request.query}".`,
+          ? `${sourceLabel(request.source)} search found ${resultNodes.length} results for "${request.query}". Start from the closest nodes and inspect their snippets.`
+          : `${sourceLabel(request.source)} search returned no results for "${request.query}".`,
       source: request.source,
       mode: null,
     },
@@ -551,19 +567,36 @@ export async function buildInteractiveSearchGraph(
   history: SearchHistoryEntry[],
   dependencies: SearchGraphDependencies,
 ): Promise<SearchBuildResult> {
-  if (request.source === "wikipedia") {
-    const results = await dependencies.searchWikipedia(request.query);
-    return createWikipediaSearchGraph(graph, request, history, results);
-  }
+  let results: WebSearchResult[] = [];
 
-  return createLocalSearchGraph(
-    graph,
-    {
-      ...request,
-      mode: request.mode ?? "semantic",
-    },
-    history,
-  );
+  switch (request.source) {
+    case "wikipedia":
+      results = await dependencies.searchWikipedia(request.query);
+      return createWebSearchGraph(graph, request, history, results);
+    case "duckduckgo":
+      results = await dependencies.searchDuckDuckGo(request.query);
+      return createWebSearchGraph(graph, request, history, results);
+    case "arxiv":
+      results = await dependencies.searchArXiv(request.query);
+      return createWebSearchGraph(graph, request, history, results);
+    case "openalex":
+      results = await dependencies.searchOpenAlex(request.query);
+      return createWebSearchGraph(graph, request, history, results);
+    case "crossref":
+      results = await dependencies.searchCrossref(request.query);
+      return createWebSearchGraph(graph, request, history, results);
+    case "local-files":
+      return createLocalSearchGraph(
+        graph,
+        {
+          ...request,
+          mode: request.mode ?? "semantic",
+        },
+        history,
+      );
+    default:
+      throw new Error(`Unsupported search source: ${request.source}`);
+  }
 }
 
 export function getSearchSourceLabel(source: SearchSource): string {
@@ -573,3 +606,4 @@ export function getSearchSourceLabel(source: SearchSource): string {
 export function getLocalSearchModeLabel(mode: LocalSearchMode | null): string {
   return modeLabel(mode);
 }
+

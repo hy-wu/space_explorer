@@ -169,6 +169,19 @@ input {
   color: #041018;
 }
 
+.submode-chip {
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.25rem;
+  background: rgba(15, 23, 42, 0.72);
+  color: #dbeafe;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.submode-chip--active {
+  background: linear-gradient(135deg, #22d3ee, #34d399);
+  color: #041018;
+}
+
 .searchbar {
   display: grid;
   grid-template-columns: minmax(280px, 520px) auto;

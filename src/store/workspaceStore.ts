@@ -8,7 +8,13 @@ import {
   type SearchSession,
   type SearchSource,
 } from "@/features/search/searchGraph";
-import { searchWikipedia } from "@/features/search/webSearch";
+import {
+  searchArXiv,
+  searchCrossref,
+  searchDuckDuckGo,
+  searchOpenAlex,
+  searchWikipedia,
+} from "@/features/search/webSearch";
 import { buildFileGraph, enrichFileGraphWithContent } from "@/features/workspace/buildFileGraph";
 import { BrowserFileSystemAdapter } from "@/infrastructure/fs/browserFileSystemAdapter";
 import type { FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
@@ -261,9 +267,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
     const state = useWorkspaceStore.getState();
     try {
-      const next = await buildInteractiveSearchGraph(request.baseNodeId?state.graph:state.baseGraph, nextRequest, state.searchHistory, {
-        searchWikipedia,
-      });
+      const next = await buildInteractiveSearchGraph(
+        request.baseNodeId ? state.graph : state.baseGraph,
+        nextRequest,
+        state.searchHistory,
+        {
+          searchWikipedia,
+          searchArXiv,
+          searchDuckDuckGo,
+          searchOpenAlex,
+          searchCrossref,
+        },
+      );
 
       set({
         graph: next.graph,

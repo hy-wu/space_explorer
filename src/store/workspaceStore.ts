@@ -219,6 +219,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
         "tsx",
         "js",
         "jsx",
+        "py",
         "json",
         "md",
         "txt",

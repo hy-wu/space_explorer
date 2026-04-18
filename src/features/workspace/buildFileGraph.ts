@@ -7,6 +7,7 @@ const extensionTags: Record<string, string[]> = {
   tsx: ["typescript", "react", "code"],
   js: ["javascript", "code"],
   jsx: ["javascript", "react", "code"],
+  py: ["python", "code"],
   md: ["markdown", "note"],
   json: ["json", "data"],
   css: ["style"],
@@ -271,11 +272,28 @@ export function enrichFileGraphWithCodeStructure(
 
     // Add import edges between files
     for (const importPath of parsed.imports) {
-      if (!importPath.startsWith(".")) continue; // Ignore external packages
-      const resolvedPath = resolveImportPath(filePath, importPath);
-      if (!resolvedPath) continue;
+      let targetFileNodeId: string | undefined;
+
+      if (importPath.startsWith(".")) {
+        const resolvedPath = resolveImportPath(filePath, importPath);
+        if (resolvedPath) {
+          targetFileNodeId = filePaths.get(resolvedPath) || filePaths.get(resolvedPath + "/index");
+        }
+      } else {
+        // Non-relative import (Python absolute, JS alias, or external package)
+        targetFileNodeId = filePaths.get(importPath) || filePaths.get(importPath + "/__init__");
+        
+        if (!targetFileNodeId) {
+          // Try suffix matching for project-relative imports
+          for (const [knownPath, nodeId] of filePaths.entries()) {
+            if (knownPath.endsWith(`/${importPath}`) || knownPath.endsWith(`/${importPath}/__init__`)) {
+              targetFileNodeId = nodeId;
+              break;
+            }
+          }
+        }
+      }
       
-      const targetFileNodeId = filePaths.get(resolvedPath) || filePaths.get(resolvedPath + "/index");
       if (targetFileNodeId) {
         newEdges.push({
           id: `edge-imports-${fileNodeId}-${targetFileNodeId}`,

@@ -67,7 +67,7 @@ export function SearchResultsPanel() {
               >
                 <span className="search-result-card__title">
                   {getNodeDisplayTitle(node)}
-                  {node.meta.explanation ? null : <button
+                  {node.kind === "web_search_result" ? <button
                     type="button"
                     className="ghost-search-button"
                     onClick={(event) => {
@@ -82,7 +82,7 @@ export function SearchResultsPanel() {
                     }}
                   >
                     {"🔍"}
-                  </button>}
+                  </button> : null}
                 </span>
                 <span className="search-result-card__meta">
                   {String(node.meta.originalKind ?? "unknown")} · score {(node.score ?? 0).toFixed(2)}

@@ -75,7 +75,7 @@ export async function searchDuckDuckGo(query: string): Promise<WebSearchResult[]
   }
 
   const data = await response.json();
-  alert(`DuckDuckGo API response: ${JSON.stringify(data)}`);  
+  // alert(`DuckDuckGo API response: ${JSON.stringify(data)}`);
   if (data.error) {
     throw new Error(`DuckDuckGo backend error: ${data.error}`);
   }

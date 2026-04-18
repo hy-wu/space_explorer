@@ -74,7 +74,7 @@ type CandidateScore = {
   score: number;
 };
 
-const SEARCH_NODE_KINDS = new Set<GraphNode["kind"]>(["search_query", "search_result", "ai_answer"]);
+const SEARCH_NODE_KINDS = new Set<GraphNode["kind"]>(["search_query", "local_search_result", "web_search_result", "ai_answer"]);
 
 function toSearchTerms(query: string): string[] {
   return query
@@ -371,7 +371,7 @@ function createLocalSearchGraph(
 
   const resultNodes: GraphNode[] = ranked.map((entry, index) => ({
     id: `search-result:${request.source}:${request.mode}:${entry.node.id}`,
-    kind: "search_result",
+    kind: "local_search_result",
     title: entry.node.title,
     tags: [...entry.node.tags, "search-result", request.source],
     score: entry.score,
@@ -503,7 +503,7 @@ function createWebSearchGraph(
 
   const resultNodes: GraphNode[] = results.slice(0, 10).map((result, index) => ({
     id: `search-result:${request.source}:${index}:${createdAt}`,
-    kind: "search_result",
+    kind: "web_search_result",
     title: result.title,
     uri: result.url,
     tags: [request.source, "web", "search-result"],

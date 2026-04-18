@@ -44,8 +44,10 @@ export function getNodeIcon(node: GraphNode): string {
       return "🔹";
     case "search_query":
       return "🔍";
-    case "search_result":
+    case "local_search_result":
       return "🧠";
+    case "web_search_result":
+      return "🌐";
     case "ai_answer":
       return "✨";
     case "tab":

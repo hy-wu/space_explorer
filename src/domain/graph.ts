@@ -10,7 +10,8 @@ export const entityKinds = [
   "tutorial",
   "symbol",
   "search_query",
-  "search_result",
+  "local_search_result",
+  "web_search_result",
   "ai_answer",
 ] as const;
 

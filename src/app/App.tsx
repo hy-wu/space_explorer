@@ -18,6 +18,8 @@ export function App() {
     <div className="shell">
       <aside className="shell__left">
         <WorkspaceSidebar />
+        <p/>
+        <InspectorPanel selectedNodeId={selectedNode} />
       </aside>
       <main className="shell__main">
         <header className="topbar">
@@ -36,7 +38,6 @@ export function App() {
       </main>
       <aside className="shell__right">
         <SearchResultsPanel />
-        <InspectorPanel selectedNodeId={selectedNode} />
       </aside>
     </div>
   );

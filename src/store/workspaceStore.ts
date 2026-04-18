@@ -43,7 +43,9 @@ type WorkspaceState = {
   activeSearchSource: SearchSource;
   activeLocalSearchMode: LocalSearchMode;
   maxFontSize: number;
+  searchMaxResults: number;
   setMaxFontSize: (size: number) => void;
+  setSearchMaxResults: (results: number) => void;
   selectNode: (nodeId: string) => void;
   pinNode: (nodeId: string, position: Position) => void;
   setSearchSource: (source: SearchSource) => void;
@@ -162,7 +164,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   activeSearchSource: "local-files",
   activeLocalSearchMode: "semantic",
   maxFontSize: 40,
+  searchMaxResults: 6,
   setMaxFontSize: (size) => set({ maxFontSize: size }),
+  setSearchMaxResults: (results) => set({ searchMaxResults: results }),
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   pinNode: (nodeId, position) =>
     set((state) => ({
@@ -289,12 +293,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       return;
     }
 
+    const state = useWorkspaceStore.getState();
     const nextRequest: SearchRequest = {
       ...request,
       query: trimmed,
+      maxResults: request.maxResults ?? state.searchMaxResults,
     };
 
-    const state = useWorkspaceStore.getState();
     try {
       const next = await buildInteractiveSearchGraph(
         request.baseNodeId ? state.graph : state.baseGraph,

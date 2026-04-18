@@ -42,6 +42,7 @@ export type SearchRequest = {
   mode: LocalSearchMode | null;
   query: string;
   baseNodeId?: string;
+  maxResults?: number;
 };
 
 export type WebSearchResult = {
@@ -51,15 +52,15 @@ export type WebSearchResult = {
 };
 
 export type SearchGraphDependencies = {
-  searchWikipedia: (query: string) => Promise<WebSearchResult[]>;
-  searchArXiv: (query: string) => Promise<WebSearchResult[]>;
-  searchDuckDuckGo: (query: string) => Promise<WebSearchResult[]>;
-  searchOpenAlex: (query: string) => Promise<WebSearchResult[]>;
-  searchCrossref: (query: string) => Promise<WebSearchResult[]>;
-  // searchSearXNG: (query: string) => Promise<WebSearchResult[]>;
-  searchHackerNews: (query: string) => Promise<WebSearchResult[]>;
-  // searchSemanticScholar: (query: string) => Promise<WebSearchResult[]>;
-  // searchGoogleBooks: (query: string) => Promise<WebSearchResult[]>;
+  searchWikipedia: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  searchArXiv: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  searchDuckDuckGo: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  searchOpenAlex: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  searchCrossref: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  // searchSearXNG: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  searchHackerNews: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  // searchSemanticScholar: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
+  // searchGoogleBooks: (query: string, maxResults: number) => Promise<WebSearchResult[]>;
 };
 
 type SearchBuildResult = {
@@ -592,34 +593,35 @@ export async function buildInteractiveSearchGraph(
   dependencies: SearchGraphDependencies,
 ): Promise<SearchBuildResult> {
   let results: WebSearchResult[] = [];
+  const maxResults = request.maxResults ?? 6;
 
   switch (request.source) {
     case "wikipedia":
-      results = await dependencies.searchWikipedia(request.query);
+      results = await dependencies.searchWikipedia(request.query, maxResults);
       return createWebSearchGraph(graph, request, history, results);
     case "duckduckgo":
-      results = await dependencies.searchDuckDuckGo(request.query);
+      results = await dependencies.searchDuckDuckGo(request.query, maxResults);
       return createWebSearchGraph(graph, request, history, results);
     // case "searxng":
-    //   results = await dependencies.searchSearXNG(request.query);
+    //   results = await dependencies.searchSearXNG(request.query, maxResults);
     //   return createWebSearchGraph(graph, request, history, results);
     // case "semantic-scholar":
-    //   results = await dependencies.searchSemanticScholar(request.query);
+    //   results = await dependencies.searchSemanticScholar(request.query, maxResults);
     //   return createWebSearchGraph(graph, request, history, results);
     // case "google-books":
-    //   results = await dependencies.searchGoogleBooks(request.query);
+    //   results = await dependencies.searchGoogleBooks(request.query, maxResults);
     //   return createWebSearchGraph(graph, request, history, results);
     case "hackernews":
-      results = await dependencies.searchHackerNews(request.query);
+      results = await dependencies.searchHackerNews(request.query, maxResults);
       return createWebSearchGraph(graph, request, history, results);
     case "arxiv":
-      results = await dependencies.searchArXiv(request.query);
+      results = await dependencies.searchArXiv(request.query, maxResults);
       return createWebSearchGraph(graph, request, history, results);
     case "openalex":
-      results = await dependencies.searchOpenAlex(request.query);
+      results = await dependencies.searchOpenAlex(request.query, maxResults);
       return createWebSearchGraph(graph, request, history, results);
     case "crossref":
-      results = await dependencies.searchCrossref(request.query);
+      results = await dependencies.searchCrossref(request.query, maxResults);
       return createWebSearchGraph(graph, request, history, results);
     case "local-files":
       return createLocalSearchGraph(

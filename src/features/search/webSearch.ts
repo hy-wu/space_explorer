@@ -2,11 +2,11 @@ import type { WebSearchResult } from "@/features/search/searchGraph";
 
 type WikipediaSearchResponse = [string, string[], string[], string[]];
 
-export async function searchWikipedia(query: string): Promise<WebSearchResult[]> {
+export async function searchWikipedia(query: string, maxResults: number = 6): Promise<WebSearchResult[]> {
   const url = new URL("https://en.wikipedia.org/w/api.php");
   url.searchParams.set("action", "opensearch");
   url.searchParams.set("search", query);
-  url.searchParams.set("limit", "6");
+  url.searchParams.set("limit", maxResults.toString());
   url.searchParams.set("namespace", "0");
   url.searchParams.set("format", "json");
   url.searchParams.set("origin", "*");
@@ -28,11 +28,11 @@ export async function searchWikipedia(query: string): Promise<WebSearchResult[]>
   }));
 }
 
-export async function searchArXiv(query: string): Promise<WebSearchResult[]> {
+export async function searchArXiv(query: string, maxResults: number = 6): Promise<WebSearchResult[]> {
   const url = new URL("https://export.arxiv.org/api/query");
   url.searchParams.set("search_query", `all:${query}`);
   url.searchParams.set("start", "0");
-  url.searchParams.set("max_results", "6");
+  url.searchParams.set("max_results", maxResults.toString());
 
   // alert(`ArXiv API request URL: ${url.toString()}`);
 
@@ -63,11 +63,11 @@ export async function searchArXiv(query: string): Promise<WebSearchResult[]> {
   return results;
 }
 
-export async function searchDuckDuckGo(query: string): Promise<WebSearchResult[]> {
+export async function searchDuckDuckGo(query: string, maxResults: number = 6): Promise<WebSearchResult[]> {
   // TODO: replace with actual backend API endpoint in production
   const url = new URL("http://127.0.0.1:8000/api/search/duckduckgo");
   url.searchParams.set("q", query);
-  url.searchParams.set("max_results", "6");
+  url.searchParams.set("max_results", maxResults.toString());
 
   const response = await fetch(url.toString());
   if (!response.ok) {
@@ -108,11 +108,11 @@ export async function searchSearXNG(query: string): Promise<WebSearchResult[]> {
   }));
 }
 
-export async function searchHackerNews(query: string): Promise<WebSearchResult[]> {
+export async function searchHackerNews(query: string, maxResults: number = 6): Promise<WebSearchResult[]> {
   const url = new URL("https://hn.algolia.com/api/v1/search");
   url.searchParams.set("query", query);
   url.searchParams.set("tags", "story");
-  url.searchParams.set("hitsPerPage", "6");
+  url.searchParams.set("hitsPerPage", maxResults.toString());
 
   const response = await fetch(url.toString());
   if (!response.ok) {
@@ -128,10 +128,10 @@ export async function searchHackerNews(query: string): Promise<WebSearchResult[]
 }
 
 // FIX
-export async function searchSemanticScholar(query: string): Promise<WebSearchResult[]> {
+export async function searchSemanticScholar(query: string, maxResults: number = 6): Promise<WebSearchResult[]> {
   const url = new URL("https://api.semanticscholar.org/graph/v1/paper/search");
   url.searchParams.set("query", query);
-  url.searchParams.set("limit", "6");
+  url.searchParams.set("limit", maxResults.toString());
   url.searchParams.set("fields", "title,authors,year,abstract,url");
 
   const response = await fetch(url.toString());
@@ -166,10 +166,10 @@ export async function searchGoogleBooks(query: string): Promise<WebSearchResult[
   }));
 }
 
-export async function searchOpenAlex(query: string): Promise<WebSearchResult[]> {
+export async function searchOpenAlex(query: string, maxResults: number = 6): Promise<WebSearchResult[]> {
   const url = new URL("https://api.openalex.org/works");
   url.searchParams.set("search", query);
-  url.searchParams.set("per_page", "6");
+  url.searchParams.set("per_page", maxResults.toString());
 
   const response = await fetch(url.toString());
   if (!response.ok) {
@@ -184,10 +184,10 @@ export async function searchOpenAlex(query: string): Promise<WebSearchResult[]> 
   }));
 }
 
-export async function searchCrossref(query: string): Promise<WebSearchResult[]> {
+export async function searchCrossref(query: string, maxResults: number = 6): Promise<WebSearchResult[]> {
   const url = new URL("https://api.crossref.org/works");
   url.searchParams.set("query", query);
-  url.searchParams.set("rows", "6");
+  url.searchParams.set("rows", maxResults.toString());
 
   const response = await fetch(url.toString());
   if (!response.ok) {

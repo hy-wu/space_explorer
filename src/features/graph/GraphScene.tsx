@@ -121,6 +121,38 @@ export function GraphScene() {
         const sprite = new SpriteText(getNodeDisplayTitle(typedNode));
         sprite.color = typedNode.id === selectedNodeId ? "#fcd34d" : "#e5f0ff";
         sprite.textHeight = 7;
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const anySprite = sprite as any;
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        anySprite.onBeforeRender = (renderer: any, scene: any, camera: any) => {
+          const maxFontSize = useWorkspaceStore.getState().maxFontSize;
+          const dist = camera.position.distanceTo(anySprite.position);
+          // Get the actual PerspectiveCamera fov
+          const fov = (camera.fov * Math.PI) / 180;
+          const screenHeight = renderer.domElement.clientHeight;
+          
+          if (!anySprite.userData.baseScaleY) {
+            anySprite.userData.baseScaleX = anySprite.scale.x;
+            anySprite.userData.baseScaleY = anySprite.scale.y;
+          }
+          
+          const worldHeight = anySprite.userData.baseScaleY;
+          const pixelHeight = (worldHeight * screenHeight) / (2 * dist * Math.tan(fov / 2));
+          
+          if (pixelHeight > maxFontSize) {
+            const scaleDown = maxFontSize / pixelHeight;
+            anySprite.scale.set(
+              anySprite.userData.baseScaleX * scaleDown,
+              anySprite.userData.baseScaleY * scaleDown,
+              1
+            );
+          } else {
+            anySprite.scale.set(anySprite.userData.baseScaleX, anySprite.userData.baseScaleY, 1);
+          }
+        };
+
         return sprite;
       }}
       // onNodeClick={(node: object) => selectNode((node as GraphNode).id)}

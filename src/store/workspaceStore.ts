@@ -42,6 +42,8 @@ type WorkspaceState = {
   searchSession: SearchSession | null;
   activeSearchSource: SearchSource;
   activeLocalSearchMode: LocalSearchMode;
+  maxFontSize: number;
+  setMaxFontSize: (size: number) => void;
   selectNode: (nodeId: string) => void;
   pinNode: (nodeId: string, position: Position) => void;
   setSearchSource: (source: SearchSource) => void;
@@ -159,6 +161,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   searchSession: null,
   activeSearchSource: "local-files",
   activeLocalSearchMode: "semantic",
+  maxFontSize: 40,
+  setMaxFontSize: (size) => set({ maxFontSize: size }),
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   pinNode: (nodeId, position) =>
     set((state) => ({

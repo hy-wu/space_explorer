@@ -12,6 +12,9 @@ export function WorkspaceSidebar() {
     return accumulator;
   }, {});
 
+  const maxFontSize = useWorkspaceStore((state) => state.maxFontSize);
+  const setMaxFontSize = useWorkspaceStore((state) => state.setMaxFontSize);
+
   return (
     <section className="panel">
       <p className="panel__title">Workspace</p>
@@ -19,6 +22,21 @@ export function WorkspaceSidebar() {
       <p className="muted">
         Tabs, files, code symbols, notes, papers, and answers all live in one graph.
       </p>
+      
+      <div style={{ margin: "12px 0" }}>
+        <label style={{ display: "block", fontSize: "0.85em", color: "#888" }}>
+          Max Node Font Size: {maxFontSize}px
+        </label>
+        <input 
+          type="range" 
+          min="10" 
+          max="150" 
+          value={maxFontSize} 
+          onChange={(e) => setMaxFontSize(Number(e.target.value))}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </div>
+
       {isImportingFolder ? "Importing ..." : "Choose "}
       <button type="button" className="import-button" onClick={() => void importFolder()} disabled={isImportingFolder}>
         {"Folder"}

@@ -22,8 +22,17 @@ async function collectFiles(
   fileHandles?: Map<string, BrowserFileHandle>,
 ): Promise<FileEntry[]> {
   const files: FileEntry[] = [];
+  const ignoredDirs = new Set(["node_modules", "dist", "build", "out", ".git", ".next"]);
 
   for await (const [name, entry] of handle.entries()) {
+    if (name.startsWith(".") && name !== ".env" && name !== ".gitignore") {
+      continue;
+    }
+
+    if (entry.kind === "directory" && ignoredDirs.has(name)) {
+      continue;
+    }
+
     const currentPath = `${root}/${name}`;
 
     if (entry.kind === "file") {

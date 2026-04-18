@@ -29,7 +29,7 @@ input {
 button {
   border: 0;
   border-radius: 12px;
-  padding: 0.8rem 1rem;
+  padding: 0.4rem 0.4rem;
   background: linear-gradient(135deg, #22d3ee, #34d399);
   color: #041018;
   font-weight: 700;
@@ -250,6 +250,10 @@ input {
   overflow: auto;
   background: #06101c;
   color: #cfe7ff;
+}
+
+.import-button {
+  border: 1px solid rgba(252, 165, 165, 0.16);
 }
 
 .ghost-button {

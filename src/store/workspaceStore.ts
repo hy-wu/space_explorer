@@ -19,9 +19,11 @@ import {
   // searchSemanticScholar,
   searchWikipedia,
 } from "@/features/search/webSearch";
-import { buildFileGraph, enrichFileGraphWithContent } from "@/features/workspace/buildFileGraph";
+import { buildFileGraph, enrichFileGraphWithContent, enrichFileGraphWithCodeStructure } from "@/features/workspace/buildFileGraph";
 import { BrowserFileSystemAdapter } from "@/infrastructure/fs/browserFileSystemAdapter";
 import type { FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
+import { SimpleCodeParserAdapter } from "@/infrastructure/parser/simpleCodeParserAdapter";
+import type { ParsedModule } from "@/infrastructure/parser/codeParserAdapter";
 
 type Position = {
   x: number;
@@ -44,7 +46,7 @@ type WorkspaceState = {
   pinNode: (nodeId: string, position: Position) => void;
   setSearchSource: (source: SearchSource) => void;
   setLocalSearchMode: (mode: LocalSearchMode) => void;
-  importFolder: () => Promise<void>;
+  importFolder: (isProject?: boolean) => Promise<void>;
   runSearch: (request: SearchRequest) => Promise<void>;
   clearSearch: () => void;
 };
@@ -151,6 +153,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   selectedNodeId: "workspace-root",
   activeFolder: null,
   isImportingFolder: false,
+  isImportingProject: false,
   importError: null,
   searchHistory: [],
   searchSession: null,
@@ -186,7 +189,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     })),
   setSearchSource: (source) => set({ activeSearchSource: source }),
   setLocalSearchMode: (mode) => set({ activeLocalSearchMode: mode }),
-  importFolder: async () => {
+  importFolder: async (isProject = false) => {
     if (!fileSystemAdapter.isSupported()) {
       set({
         importError: "This browser does not support folder picking yet. Chrome or Edge is recommended for the MVP.",
@@ -240,7 +243,24 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
           }),
         ),
       );
-      const enrichedGraph = enrichFileGraphWithContent(graph, fileContents);
+      let enrichedGraph = enrichFileGraphWithContent(graph, fileContents);
+
+      if (isProject) {
+        // Parse code files
+        const parser = new SimpleCodeParserAdapter();
+        const parsedModules: Record<string, ParsedModule> = {};
+        
+        for (const file of files) {
+          if (parser.supports(file.path)) {
+            const content = fileContents[file.path];
+            if (content) {
+              parsedModules[file.path] = await parser.parseModule(file.path, content);
+            }
+          }
+        }
+
+        enrichedGraph = enrichFileGraphWithCodeStructure(enrichedGraph, parsedModules);
+      }
 
       set({
         baseGraph: enrichedGraph,

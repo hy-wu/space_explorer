@@ -1,5 +1,6 @@
 import type { GraphData, GraphEdge, GraphNode } from "@/domain/graph";
 import type { FileEntry, FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
+import type { ParsedModule } from "@/infrastructure/parser/codeParserAdapter";
 
 const extensionTags: Record<string, string[]> = {
   ts: ["typescript", "code"],
@@ -205,4 +206,89 @@ export function enrichFileGraphWithContent(
       };
     }),
   };
+}
+
+function resolveImportPath(basePath: string, importPath: string): string | null {
+  if (!importPath.startsWith(".")) return null;
+  const baseParts = basePath.split("/");
+  baseParts.pop(); // remove filename
+  const importParts = importPath.split("/");
+  for (const part of importParts) {
+    if (part === ".") continue;
+    if (part === "..") baseParts.pop();
+    else baseParts.push(part);
+  }
+  return baseParts.join("/");
+}
+
+export function enrichFileGraphWithCodeStructure(
+  graph: GraphData,
+  parsedModules: Record<string, ParsedModule>,
+): GraphData {
+  const newNodes: GraphNode[] = [...graph.nodes];
+  const newEdges: GraphEdge[] = [...graph.edges];
+  
+  // Find all file paths without extensions for easy lookup
+  const filePaths = new Map<string, string>();
+  for (const node of graph.nodes) {
+    if (node.kind === "file" && typeof node.meta.path === "string") {
+      const withoutExt = node.meta.path.replace(/\.[^/.]+$/, "");
+      filePaths.set(withoutExt, node.id);
+      filePaths.set(node.meta.path, node.id); // Also keep exact match
+    }
+  }
+
+  for (const [filePath, parsed] of Object.entries(parsedModules)) {
+    const fileNodeId = makeId("file", filePath);
+    
+    // Add symbols and connect them to the file
+    for (const symbol of parsed.symbols) {
+      const symbolNodeId = makeId("symbol", symbol.id);
+      newNodes.push({
+        id: symbolNodeId,
+        kind: "symbol",
+        title: symbol.name,
+        uri: symbol.id,
+        tags: ["code", "symbol", symbol.kind],
+        meta: {
+          kind: symbol.kind,
+          exported: symbol.exported,
+          filePath,
+        },
+        position: { x: 0, y: 0, z: 0 }, // Will be positioned by force graph
+      });
+
+      newEdges.push({
+        id: `edge-defines-${fileNodeId}-${symbolNodeId}`,
+        source: fileNodeId,
+        target: symbolNodeId,
+        kind: "defines",
+        directed: true,
+        meta: {},
+        weight: 1,
+      });
+    }
+
+    // Add import edges between files
+    for (const importPath of parsed.imports) {
+      if (!importPath.startsWith(".")) continue; // Ignore external packages
+      const resolvedPath = resolveImportPath(filePath, importPath);
+      if (!resolvedPath) continue;
+      
+      const targetFileNodeId = filePaths.get(resolvedPath) || filePaths.get(resolvedPath + "/index");
+      if (targetFileNodeId) {
+        newEdges.push({
+          id: `edge-imports-${fileNodeId}-${targetFileNodeId}`,
+          source: fileNodeId,
+          target: targetFileNodeId,
+          kind: "imports",
+          directed: true,
+          meta: {},
+          weight: 2,
+        });
+      }
+    }
+  }
+
+  return { nodes: newNodes, edges: newEdges };
 }

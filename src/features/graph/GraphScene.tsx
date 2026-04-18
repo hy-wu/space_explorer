@@ -84,6 +84,9 @@ export function GraphScene() {
           return "#f59e0b";
         }
 
+        if (kind === "imports") return "#ec4899"; // pink for imports
+        if (kind === "defines") return "#8b5cf6"; // purple for defines
+
         return kind === "similar_to" ? "#76e4f7" : kind === "generated_from" ? "#8b5cf6" : "#3c5e82";
       }}
       linkOpacity={0.35}

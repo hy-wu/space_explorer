@@ -19,8 +19,13 @@ export function WorkspaceSidebar() {
       <p className="muted">
         Tabs, files, code symbols, notes, papers, and answers all live in one graph.
       </p>
-      <button type="button" onClick={() => void importFolder()} disabled={isImportingFolder}>
-        {isImportingFolder ? "Importing folder..." : "Choose Folder"}
+      {isImportingFolder ? "Importing ..." : "Choose "}
+      <button type="button" className="import-button" onClick={() => void importFolder()} disabled={isImportingFolder}>
+        {"Folder"}
+      </button>
+      {" or "}
+      <button type="button" className="import-button" onClick={() => void importFolder(true)} disabled={isImportingFolder}>
+        {"Project"}
       </button>
       <p className="muted">
         {activeFolder ? `Current folder: ${activeFolder.name}` : "No folder connected yet."}

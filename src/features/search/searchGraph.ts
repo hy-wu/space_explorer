@@ -1,6 +1,17 @@
 import type { GraphData, GraphEdge, GraphNode } from "@/domain/graph";
 
-export const searchSources = ["local-files", "wikipedia", "duckduckgo", "arxiv", "openalex", "crossref"] as const;  // TODO: "duckduckgo", "arxiv"
+export const searchSources = [
+  "local-files",
+  "wikipedia",
+  // "searxng",
+  // "semantic-scholar",
+  // "google-books",
+  "arxiv",
+  "openalex",
+  "crossref",
+  "hackernews",
+  "duckduckgo",
+] as const;
 export const localSearchModes = ["name", "semantic", "content", "keywords"] as const;
 
 export type SearchSource = (typeof searchSources)[number];
@@ -45,6 +56,10 @@ export type SearchGraphDependencies = {
   searchDuckDuckGo: (query: string) => Promise<WebSearchResult[]>;
   searchOpenAlex: (query: string) => Promise<WebSearchResult[]>;
   searchCrossref: (query: string) => Promise<WebSearchResult[]>;
+  // searchSearXNG: (query: string) => Promise<WebSearchResult[]>;
+  searchHackerNews: (query: string) => Promise<WebSearchResult[]>;
+  // searchSemanticScholar: (query: string) => Promise<WebSearchResult[]>;
+  // searchGoogleBooks: (query: string) => Promise<WebSearchResult[]>;
 };
 
 type SearchBuildResult = {
@@ -271,12 +286,20 @@ function sourceLabel(source: SearchSource): string {
       return "Wikipedia";
     case "duckduckgo":
       return "DuckDuckGo";
+    // case "searxng":
+    //   return "Web Search (SearXNG)";
+    // case "semantic-scholar":
+    //   return "Semantic Scholar (Academic)";
+    // case "google-books":
+    //   return "Google Books";
     case "arxiv":
       return "ArXiv";
     case "openalex":
       return "OpenAlex";
     case "crossref":
       return "Crossref";
+    case "hackernews":
+      return "Hacker News";
     default:
       return source;
   }
@@ -478,13 +501,13 @@ function createWebSearchGraph(
     },
   };
 
-  const resultNodes: GraphNode[] = results.slice(0, 6).map((result, index) => ({
+  const resultNodes: GraphNode[] = results.slice(0, 10).map((result, index) => ({
     id: `search-result:${request.source}:${index}:${createdAt}`,
     kind: "search_result",
     title: result.title,
     uri: result.url,
     tags: [request.source, "web", "search-result"],
-    score: Math.max(0.35, 0.92 - index * 0.08),
+    score: Math.max(0.35, 0.92 - index * 0.05),
     meta: {
       explanation: result.snippet,
       originalKind: `${request.source}_result`,
@@ -498,6 +521,14 @@ function createWebSearchGraph(
   }));
 
   const answerNodeId = `search-answer:${createdAt}`;
+  let summary = results.length > 0
+    ? `${sourceLabel(request.source)} search found ${results.length} results for "${request.query}". Start from the closest nodes and inspect their snippets.`
+    : `${sourceLabel(request.source)} search returned no results for "${request.query}".`;
+
+  if (request.source === "duckduckgo" && results.length === 0) {
+    summary += " Note: DuckDuckGo API focuses on 'Instant Answers'. For broader web searches, try 'Web Search (SearXNG)'.";
+  }
+
   const answerNode: GraphNode = {
     id: answerNodeId,
     kind: "ai_answer",
@@ -505,10 +536,7 @@ function createWebSearchGraph(
     tags: ["answer", "summary", request.source],
     score: resultNodes[0]?.score ?? 0.5,
     meta: {
-      summary:
-        resultNodes.length > 0
-          ? `${sourceLabel(request.source)} search found ${resultNodes.length} results for "${request.query}". Start from the closest nodes and inspect their snippets.`
-          : `${sourceLabel(request.source)} search returned no results for "${request.query}".`,
+      summary,
       source: request.source,
       mode: null,
     },
@@ -575,6 +603,18 @@ export async function buildInteractiveSearchGraph(
       return createWebSearchGraph(graph, request, history, results);
     case "duckduckgo":
       results = await dependencies.searchDuckDuckGo(request.query);
+      return createWebSearchGraph(graph, request, history, results);
+    // case "searxng":
+    //   results = await dependencies.searchSearXNG(request.query);
+    //   return createWebSearchGraph(graph, request, history, results);
+    // case "semantic-scholar":
+    //   results = await dependencies.searchSemanticScholar(request.query);
+    //   return createWebSearchGraph(graph, request, history, results);
+    // case "google-books":
+    //   results = await dependencies.searchGoogleBooks(request.query);
+    //   return createWebSearchGraph(graph, request, history, results);
+    case "hackernews":
+      results = await dependencies.searchHackerNews(request.query);
       return createWebSearchGraph(graph, request, history, results);
     case "arxiv":
       results = await dependencies.searchArXiv(request.query);

@@ -34,13 +34,13 @@ export async function searchArXiv(query: string): Promise<WebSearchResult[]> {
   url.searchParams.set("start", "0");
   url.searchParams.set("max_results", "6");
 
-  alert(`ArXiv API request URL: ${url.toString()}`);
+  // alert(`ArXiv API request URL: ${url.toString()}`);
 
   // OPTIMIZE: using CORS proxy to avoid CORS issues in the browser; in production, consider implementing a backend proxy for better reliability and security
   const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url.toString())}`;
   const response = await fetch(proxyUrl);
 
-  alert(`ArXiv API response status: ${response.status}`);
+  // alert(`ArXiv API response status: ${response.status}`);
 
   if (!response.ok) {
     throw new Error(`ArXiv search failed with status ${response.status}.`);
@@ -70,6 +70,7 @@ export async function searchDuckDuckGo(query: string): Promise<WebSearchResult[]
   url.searchParams.set("no_html", "1");
   url.searchParams.set("skip_disambig", "1");
 
+  alert(url.toString());
   const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error(`DuckDuckGo search failed with status ${response.status}.`);
@@ -88,19 +89,101 @@ export async function searchDuckDuckGo(query: string): Promise<WebSearchResult[]
     });
   }
 
-  if (data.RelatedTopics) {
-    for (const topic of data.RelatedTopics.slice(0, 5)) {
-      if (topic.Text && topic.FirstURL) {
-        results.push({
-          title: topic.FirstURL.split("/").pop()?.replace(/_/g, " ") || topic.Text.slice(0, 30),
-          snippet: topic.Text,
-          url: topic.FirstURL,
-        });
-      }
+  const processTopic = (topic: any) => {
+    if (results.length >= 10) return;
+    if (topic.Text && topic.FirstURL) {
+      results.push({
+        title: topic.FirstURL.split("/").pop()?.replace(/_/g, " ") || topic.Text.slice(0, 40),
+        snippet: topic.Text,
+        url: topic.FirstURL,
+      });
     }
+    if (topic.Topics && Array.isArray(topic.Topics)) {
+      topic.Topics.forEach(processTopic);
+    }
+  };
+
+  if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
+    data.RelatedTopics.forEach(processTopic);
   }
 
   return results;
+}
+
+export async function searchSearXNG(query: string): Promise<WebSearchResult[]> {
+  // Using a popular public instance. In production, users might want to configure their own.
+  const url = new URL("https://searx.be/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("categories", "general");
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`SearXNG search failed with status ${response.status}.`);
+  }
+
+  const data = await response.json();
+  return (data.results || []).slice(0, 6).map((res: any) => ({
+    title: res.title || "No title",
+    snippet: res.content || res.snippet || "No snippet",
+    url: res.url || "",
+  }));
+}
+
+export async function searchHackerNews(query: string): Promise<WebSearchResult[]> {
+  const url = new URL("https://hn.algolia.com/api/v1/search");
+  url.searchParams.set("query", query);
+  url.searchParams.set("tags", "story");
+  url.searchParams.set("hitsPerPage", "6");
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Hacker News search failed with status ${response.status}.`);
+  }
+
+  const data = await response.json();
+  return (data.hits || []).map((hit: any) => ({
+    title: hit.title || "No title",
+    snippet: `${hit.points || 0} points by ${hit.author} | ${hit.num_comments || 0} comments`,
+    url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+  }));
+}
+
+export async function searchSemanticScholar(query: string): Promise<WebSearchResult[]> {
+  const url = new URL("https://api.semanticscholar.org/graph/v1/paper/search");
+  url.searchParams.set("query", query);
+  url.searchParams.set("limit", "6");
+  url.searchParams.set("fields", "title,authors,year,abstract,url");
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Semantic Scholar search failed with status ${response.status}.`);
+  }
+
+  const data = await response.json();
+  return (data.data || []).map((paper: any) => ({
+    title: paper.title || "No title",
+    snippet: `${paper.year || "Unknown year"} · ${paper.authors?.map((a: any) => a.name).join(", ") || "Unknown authors"} · ${paper.abstract?.slice(0, 200) || "No abstract..."}`,
+    url: paper.url || `https://www.semanticscholar.org/paper/${paper.paperId}`,
+  }));
+}
+
+export async function searchGoogleBooks(query: string): Promise<WebSearchResult[]> {
+  const url = new URL("https://www.googleapis.com/books/v1/volumes");
+  url.searchParams.set("q", query);
+  url.searchParams.set("maxResults", "6");
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Google Books search failed with status ${response.status}.`);
+  }
+
+  const data = await response.json();
+  return (data.items || []).map((item: any) => ({
+    title: item.volumeInfo.title || "No title",
+    snippet: `${item.volumeInfo.authors?.join(", ") || "Unknown author"} · ${item.volumeInfo.publisher || "Unknown publisher"} (${item.volumeInfo.publishedDate || "N/A"}) · ${item.volumeInfo.description?.slice(0, 150) || "No description"}`,
+    url: item.volumeInfo.infoLink || "",
+  }));
 }
 
 export async function searchOpenAlex(query: string): Promise<WebSearchResult[]> {

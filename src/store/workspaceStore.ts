@@ -12,7 +12,11 @@ import {
   searchArXiv,
   searchCrossref,
   searchDuckDuckGo,
+  // searchGoogleBooks,
+  searchHackerNews,
   searchOpenAlex,
+  // searchSearXNG,
+  // searchSemanticScholar,
   searchWikipedia,
 } from "@/features/search/webSearch";
 import { buildFileGraph, enrichFileGraphWithContent } from "@/features/workspace/buildFileGraph";
@@ -277,6 +281,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
           searchDuckDuckGo,
           searchOpenAlex,
           searchCrossref,
+          // searchSearXNG,
+          searchHackerNews,
+          // searchSemanticScholar,
+          // searchGoogleBooks,
         },
       );
 

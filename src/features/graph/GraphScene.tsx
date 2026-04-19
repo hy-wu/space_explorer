@@ -86,6 +86,7 @@ export function GraphScene() {
 
         if (kind === "imports") return "#ec4899"; // pink for imports
         if (kind === "defines") return "#8b5cf6"; // purple for defines
+        if (kind === "references") return "#10b981"; // green for precise symbol references
 
         return kind === "similar_to" ? "#76e4f7" : kind === "generated_from" ? "#8b5cf6" : "#3c5e82";
       }}

@@ -12,6 +12,11 @@ export function WorkspaceSidebar() {
     return accumulator;
   }, {});
 
+  const edgeCounts = graph.edges.reduce<Record<string, number>>((accumulator, edge) => {
+    accumulator[edge.kind] = (accumulator[edge.kind] ?? 0) + 1;
+    return accumulator;
+  }, {});
+
   const maxFontSize = useWorkspaceStore((state) => state.maxFontSize);
   const setMaxFontSize = useWorkspaceStore((state) => state.setMaxFontSize);
 
@@ -49,24 +54,30 @@ export function WorkspaceSidebar() {
         {activeFolder ? `Current folder: ${activeFolder.name}` : "No folder connected yet."}
       </p>
       {importError ? <p className="error-text">{importError}</p> : null}
-      <div className="stat-grid">
-        <div>
-          <span>Nodes</span>
-          <strong>{graph.nodes.length}</strong>
-        </div>
-        <div>
-          <span>Edges</span>
-          <strong>{graph.edges.length}</strong>
-        </div>
+      
+      <div style={{ marginTop: "16px" }}>
+        <p style={{ fontSize: "0.75em", fontWeight: "bold", textTransform: "uppercase", color: "#555", marginBottom: "8px" }}>Entities</p>
+        <ul className="kind-list">
+          {Object.entries(counts).map(([kind, count]) => (
+            <li key={kind}>
+              <span>{kind}</span>
+              <strong>{count}</strong>
+            </li>
+          ))}
+        </ul>
       </div>
-      <ul className="kind-list">
-        {Object.entries(counts).map(([kind, count]) => (
-          <li key={kind}>
-            <span>{kind}</span>
-            <strong>{count}</strong>
-          </li>
-        ))}
-      </ul>
+
+      <div style={{ marginTop: "16px" }}>
+        <p style={{ fontSize: "0.75em", fontWeight: "bold", textTransform: "uppercase", color: "#555", marginBottom: "8px" }}>Relationships</p>
+        <ul className="kind-list">
+          {Object.entries(edgeCounts).map(([kind, count]) => (
+            <li key={kind}>
+              <span style={{ color: kind === "references" ? "#10b981" : kind === "defines" ? "#8b5cf6" : kind === "imports"? "#ec4899" : "inherit" }}>{kind}</span>
+              <strong>{count}</strong>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

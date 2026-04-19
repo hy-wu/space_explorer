@@ -2,14 +2,16 @@ import type { CodeParserAdapter, ParsedModule, SymbolInfo } from "./codeParserAd
 
 export class SimpleCodeParserAdapter implements CodeParserAdapter {
   supports(filePath: string): boolean {
-    return /\.(ts|tsx|js|jsx|py)$/i.test(filePath);
+    return /\.(ts|tsx|js|jsx|py|c|cpp|cc|cxx|h|hpp|cu|cuh)$/i.test(filePath);
   }
 
   async parseModule(filePath: string, source: string): Promise<ParsedModule> {
     const imports: string[] = [];
     const symbols: SymbolInfo[] = [];
 
-    const isPython = /\.py$/i.test(filePath);
+    const ext = filePath.split(".").pop()?.toLowerCase() || "";
+    const isPython = ext === "py";
+    const isCpp = ["c", "cpp", "cc", "cxx", "h", "hpp", "cu", "cuh"].includes(ext);
 
     if (isPython) {
       // Extract python imports
@@ -32,6 +34,44 @@ export class SimpleCodeParserAdapter implements CodeParserAdapter {
             id: `${filePath}:${name}`,
             name,
             kind: kindStr,
+            exported: true,
+          });
+        }
+      }
+    } else if (isCpp) {
+      // Extract C/C++/CUDA includes
+      const includeRegex = /#include\s+["<]([^">]+)[">]/g;
+      let match;
+      while ((match = includeRegex.exec(source)) !== null) {
+        if (match[1]) {
+          // Remove extension for matching file nodes in graph
+          imports.push(match[1].replace(/\.(h|hpp|cuh)$/, ""));
+        }
+      }
+
+      // Extract C++ Classes/Structs
+      const classRegex = /^(?:class|struct)\s+([a-zA-Z0-9_]+)/gm;
+      while ((match = classRegex.exec(source)) !== null) {
+        if (match[1]) {
+          symbols.push({
+            id: `${filePath}:${match[1]}`,
+            name: match[1],
+            kind: "class",
+            exported: true,
+          });
+        }
+      }
+
+      // Extract Functions (including CUDA kernels)
+      // Matches: void func(, int func(, __global__ void kernel(
+      const funcRegex = /^(?:[\w:*&]+\s+){0,3}(?:__global__|__device__|__host__)?\s*[\w:*&]+\s+([\w]+)\s*\(/gm;
+      while ((match = funcRegex.exec(source)) !== null) {
+        const name = match[1];
+        if (name && !["if", "while", "for", "switch", "return"].includes(name)) {
+          symbols.push({
+            id: `${filePath}:${name}`,
+            name,
+            kind: "function",
             exported: true,
           });
         }

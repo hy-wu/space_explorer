@@ -121,6 +121,7 @@ export function GraphScene() {
         const sprite = new SpriteText(getNodeDisplayTitle(typedNode));
         sprite.color = typedNode.id === selectedNodeId ? "#fcd34d" : "#e5f0ff";
         sprite.textHeight = 7;
+        sprite.padding = 0.5;
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const anySprite = sprite as any;

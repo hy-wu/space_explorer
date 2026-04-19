@@ -114,11 +114,17 @@ function semanticScore(node: GraphNode, query: string, terms: string[]): Candida
     return null;
   }
 
+  const reasons: string[] = [];
+  if (exactTitleMatch > 0) reasons.push("exact title match");
+  if (titleTermHits > 0) reasons.push(`title matched ${matchedTerms.filter(t => title.includes(t)).join(", ")}`);
+  if (tagHits > 0) reasons.push("tag overlap");
+  if (matchedTerms.length > 0 && reasons.length === 0) reasons.push(`context matched ${matchedTerms.join(", ")}`);
+
   return {
     node,
     score,
     matchedTerms,
-    explanation: `${matchedTerms.length > 0 ? `matched ${matchedTerms.join(", ")}` : "related context"} · semantic match`,
+    explanation: `${reasons.join(" · ") || "context match"} · semantic search`,
   };
 }
 
@@ -160,11 +166,21 @@ function contentScore(node: GraphNode, query: string, terms: string[]): Candidat
     return null;
   }
 
+  // Find a snippet around the first matched term
+  let snippet = "";
+  const firstTerm = terms.find(t => content.includes(t));
+  if (firstTerm) {
+    const idx = content.indexOf(firstTerm);
+    const start = Math.max(0, idx - 40);
+    const end = Math.min(content.length, idx + 60);
+    snippet = "..." + content.slice(start, end).replace(/\n/g, " ") + "...";
+  }
+
   return {
     node,
     score,
     matchedTerms,
-    explanation: `${matchedTerms.length > 0 ? `content matched ${matchedTerms.join(", ")}` : "content match"} · content search`,
+    explanation: `${matchedTerms.length > 0 ? `content matched ${matchedTerms.join(", ")}` : "content match"} ${snippet ? `\n"${snippet}"` : ""} · content search`,
   };
 }
 

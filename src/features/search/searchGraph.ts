@@ -364,11 +364,12 @@ function createLocalSearchGraph(
   history: SearchHistoryEntry[],
 ): SearchBuildResult {
   const baseGraph = sanitizeBaseGraph(graph);
+  const maxResults = request.maxResults ?? 6;
   const ranked = baseGraph.nodes
     .map((node) => scoreLocalCandidate(node, request))
     .filter((entry): entry is CandidateScore => entry !== null)
     .sort((left, right) => right.score - left.score)
-    .slice(0, 6);
+    .slice(0, maxResults);
 
   const createdAt = new Date().toISOString();
   const queryNodeId = `search-query:${createdAt}`;

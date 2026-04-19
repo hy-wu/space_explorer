@@ -44,8 +44,10 @@ type WorkspaceState = {
   activeLocalSearchMode: LocalSearchMode;
   maxFontSize: number;
   searchMaxResults: number;
+  shouldParsePdf: boolean;
   setMaxFontSize: (size: number) => void;
   setSearchMaxResults: (results: number) => void;
+  setShouldParsePdf: (enabled: boolean) => void;
   selectNode: (nodeId: string) => void;
   pinNode: (nodeId: string, position: Position) => void;
   setSearchSource: (source: SearchSource) => void;
@@ -165,8 +167,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   activeLocalSearchMode: "semantic",
   maxFontSize: 40,
   searchMaxResults: 6,
+  shouldParsePdf: true,
   setMaxFontSize: (size) => set({ maxFontSize: size }),
   setSearchMaxResults: (results) => set({ searchMaxResults: results }),
+  setShouldParsePdf: (enabled) => set({ shouldParsePdf: enabled }),
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   pinNode: (nodeId, position) =>
     set((state) => ({
@@ -222,6 +226,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
       const files = await fileSystemAdapter.listFiles(folder);
       const graph = buildFileGraph(folder, files);
+      const state = useWorkspaceStore.getState();
       const textFriendlyExtensions = new Set([
         "ts",
         "tsx",
@@ -238,12 +243,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
         "cuh",
         "json",
         "md",
+        "tex",
         "txt",
         "css",
         "html",
         "yml",
         "yaml",
       ]);
+      if (state.shouldParsePdf) {
+        textFriendlyExtensions.add("pdf");
+      }
       const fileContents = Object.fromEntries(
         await Promise.all(
           files.map(async (file) => {

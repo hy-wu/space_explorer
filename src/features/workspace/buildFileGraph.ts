@@ -16,6 +16,7 @@ const extensionTags: Record<string, string[]> = {
   hpp: ["cpp", "header", "code"],
   cu: ["cuda", "nvidia", "code"],
   cuh: ["cuda", "header", "code"],
+  tex: ["latex", "note"],
   md: ["markdown", "note"],
   json: ["json", "data"],
   css: ["style"],

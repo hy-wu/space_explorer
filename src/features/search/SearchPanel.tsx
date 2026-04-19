@@ -34,7 +34,7 @@ export function SearchPanel() {
       </div>
 
       {activeSearchSource === "local-files" ? (
-        <div className="search-mode-row">
+        <div className="checkbox-row">
           {localSearchModes.map((mode) => (
             <button
               key={mode}
@@ -45,25 +45,26 @@ export function SearchPanel() {
               {getLocalSearchModeLabel(mode)}
             </button>
           ))}
+          <label>Max Results:</label>
+          <input
+            type="number"
+            min="1"
+            max="50"
+            value={searchMaxResults}
+            onChange={(e) => setSearchMaxResults(Number(e.target.value) || 6)}
+            className="control-number"
+          />
         </div>
       ) : (
         <div className="search-mode-row" style={{ alignItems: "center", padding: "0 4px" }}>
-          <label style={{ fontSize: "0.8em", color: "#888", marginRight: "8px" }}>Max Results:</label>
+          <label className="control-label">Max Results:</label>
           <input
             type="number"
             min="1"
             max="10"  // OPTIMIZE: I tried for most sources, get not much more than 10 results, maybe other page parameters are needed for more results?
             value={searchMaxResults}
             onChange={(e) => setSearchMaxResults(Number(e.target.value) || 6)}
-            style={{ 
-              width: "60px", 
-              background: "#1e293b", 
-              color: "#cbd5e1", 
-              border: "1px solid #334155",
-              borderRadius: "4px",
-              padding: "2px 6px",
-              fontSize: "0.85em"
-            }}
+            className="control-number"
           />
         </div>
       )}

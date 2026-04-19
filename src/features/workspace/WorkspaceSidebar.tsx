@@ -19,6 +19,8 @@ export function WorkspaceSidebar() {
 
   const maxFontSize = useWorkspaceStore((state) => state.maxFontSize);
   const setMaxFontSize = useWorkspaceStore((state) => state.setMaxFontSize);
+  const shouldParsePdf = useWorkspaceStore((state) => state.shouldParsePdf);
+  const setShouldParsePdf = useWorkspaceStore((state) => state.setShouldParsePdf);
 
   return (
     <section className="panel">
@@ -28,18 +30,32 @@ export function WorkspaceSidebar() {
         Tabs, files, code symbols, notes, papers, and answers all live in one graph.
       </p>
       
-      <div style={{ margin: "12px 0" }}>
-        <label style={{ display: "block", fontSize: "0.85em", color: "#888" }}>
-          Max Node Font Size: {maxFontSize}px
+      <div className="control-group">
+        <div>
+          <div className="search-mode-row">
+          <label className="control-label">
+            Max Node Font Size:
+          </label>
+          <label>{maxFontSize} px</label>
+          </div>
+          <input 
+            type="range" 
+            min="10" 
+            max="150" 
+            value={maxFontSize} 
+            onChange={(e) => setMaxFontSize(Number(e.target.value))}
+            className="control-range"
+          />
+        </div>
+
+        <label className="checkbox-row">
+          <input 
+            type="checkbox" 
+            checked={shouldParsePdf}
+            onChange={(e) => setShouldParsePdf(e.target.checked)}
+          />
+          <span>Extract PDF Content (Slow)</span>
         </label>
-        <input 
-          type="range" 
-          min="10" 
-          max="150" 
-          value={maxFontSize} 
-          onChange={(e) => setMaxFontSize(Number(e.target.value))}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
       </div>
 
       {isImportingFolder ? "Importing ..." : "Choose "}

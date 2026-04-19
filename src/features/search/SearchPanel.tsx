@@ -11,9 +11,11 @@ export function SearchPanel() {
   const [query, setQuery] = useState("");
   const activeSearchSource = useWorkspaceStore((state) => state.activeSearchSource);
   const activeLocalSearchMode = useWorkspaceStore((state) => state.activeLocalSearchMode);
+  const searchMaxResults = useWorkspaceStore((state) => state.searchMaxResults);
   const searchSession = useWorkspaceStore((state) => state.searchSession);
   const setSearchSource = useWorkspaceStore((state) => state.setSearchSource);
   const setLocalSearchMode = useWorkspaceStore((state) => state.setLocalSearchMode);
+  const setSearchMaxResults = useWorkspaceStore((state) => state.setSearchMaxResults);
   const runSearch = useWorkspaceStore((state) => state.runSearch);
 
   return (
@@ -32,7 +34,7 @@ export function SearchPanel() {
       </div>
 
       {activeSearchSource === "local-files" ? (
-        <div className="search-mode-row">
+        <div className="checkbox-row">
           {localSearchModes.map((mode) => (
             <button
               key={mode}
@@ -43,8 +45,29 @@ export function SearchPanel() {
               {getLocalSearchModeLabel(mode)}
             </button>
           ))}
+          <label>Max Results:</label>
+          <input
+            type="number"
+            min="1"
+            max="50"
+            value={searchMaxResults}
+            onChange={(e) => setSearchMaxResults(Number(e.target.value) || 6)}
+            className="control-number"
+          />
         </div>
-      ) : null}
+      ) : (
+        <div className="search-mode-row" style={{ alignItems: "center", padding: "0 4px" }}>
+          <label className="control-label">Max Results:</label>
+          <input
+            type="number"
+            min="1"
+            max="10"  // OPTIMIZE: I tried for most sources, get not much more than 10 results, maybe other page parameters are needed for more results?
+            value={searchMaxResults}
+            onChange={(e) => setSearchMaxResults(Number(e.target.value) || 6)}
+            className="control-number"
+          />
+        </div>
+      )}
 
       <form
         className="searchbar"

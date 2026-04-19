@@ -1,4 +1,9 @@
 import type { FileEntry, FileSystemAdapter, FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
+import * as pdfjs from "pdfjs-dist";
+
+// Configure worker using Vite's static asset handling or a URL
+// For Vite, the most robust way is to use the minified worker from the package
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 type BrowserFileHandle = {
   kind: "file";
@@ -22,8 +27,17 @@ async function collectFiles(
   fileHandles?: Map<string, BrowserFileHandle>,
 ): Promise<FileEntry[]> {
   const files: FileEntry[] = [];
+  const ignoredDirs = new Set(["node_modules", "dist", "build", "out", ".git", ".next"]);
 
   for await (const [name, entry] of handle.entries()) {
+    if (name.startsWith(".") && name !== ".env" && name !== ".gitignore") {
+      continue;
+    }
+
+    if (entry.kind === "directory" && ignoredDirs.has(name)) {
+      continue;
+    }
+
     const currentPath = `${root}/${name}`;
 
     if (entry.kind === "file") {
@@ -85,6 +99,35 @@ export class BrowserFileSystemAdapter implements FileSystemAdapter {
     }
 
     const file = await handle.getFile();
+    
+    if (file.name.toLowerCase().endsWith(".pdf")) {
+      return this.extractPdfText(file);
+    }
+    
     return file.text();
+  }
+
+  private async extractPdfText(file: File): Promise<string> {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      
+      let fullText = "";
+      for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) { // Limit to 20 pages for performance
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((item: any) => item.str)
+          .join(" ");
+        fullText += pageText + "\n";
+      }
+      
+      return fullText;
+    } catch (error) {
+      console.error("PDF extraction failed:", error);
+      return `[PDF Extraction Error: ${error instanceof Error ? error.message : String(error)}]`;
+    }
   }
 }

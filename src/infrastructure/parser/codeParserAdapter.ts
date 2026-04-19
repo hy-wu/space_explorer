@@ -9,6 +9,7 @@ export type ParsedModule = {
   filePath: string;
   imports: string[];
   symbols: SymbolInfo[];
+  references: string[]; // List of potential symbol names used in this file
 };
 
 export interface CodeParserAdapter {

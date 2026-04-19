@@ -19,6 +19,7 @@ export const relationKinds = [
   "contains",
   "references",
   "imports",
+  "defines",
   "similar_to",
   "related_to",
   "opened_with",

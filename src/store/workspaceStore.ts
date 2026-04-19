@@ -19,9 +19,11 @@ import {
   // searchSemanticScholar,
   searchWikipedia,
 } from "@/features/search/webSearch";
-import { buildFileGraph, enrichFileGraphWithContent } from "@/features/workspace/buildFileGraph";
+import { buildFileGraph, enrichFileGraphWithContent, enrichFileGraphWithCodeStructure } from "@/features/workspace/buildFileGraph";
 import { BrowserFileSystemAdapter } from "@/infrastructure/fs/browserFileSystemAdapter";
 import type { FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
+import { SimpleCodeParserAdapter } from "@/infrastructure/parser/simpleCodeParserAdapter";
+import type { ParsedModule } from "@/infrastructure/parser/codeParserAdapter";
 
 type Position = {
   x: number;
@@ -40,11 +42,17 @@ type WorkspaceState = {
   searchSession: SearchSession | null;
   activeSearchSource: SearchSource;
   activeLocalSearchMode: LocalSearchMode;
+  maxFontSize: number;
+  searchMaxResults: number;
+  shouldParsePdf: boolean;
+  setMaxFontSize: (size: number) => void;
+  setSearchMaxResults: (results: number) => void;
+  setShouldParsePdf: (enabled: boolean) => void;
   selectNode: (nodeId: string) => void;
   pinNode: (nodeId: string, position: Position) => void;
   setSearchSource: (source: SearchSource) => void;
   setLocalSearchMode: (mode: LocalSearchMode) => void;
-  importFolder: () => Promise<void>;
+  importFolder: (isProject?: boolean) => Promise<void>;
   runSearch: (request: SearchRequest) => Promise<void>;
   clearSearch: () => void;
 };
@@ -151,11 +159,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   selectedNodeId: "workspace-root",
   activeFolder: null,
   isImportingFolder: false,
+  isImportingProject: false,
   importError: null,
   searchHistory: [],
   searchSession: null,
   activeSearchSource: "local-files",
   activeLocalSearchMode: "semantic",
+  maxFontSize: 40,
+  searchMaxResults: 6,
+  shouldParsePdf: true,
+  setMaxFontSize: (size) => set({ maxFontSize: size }),
+  setSearchMaxResults: (results) => set({ searchMaxResults: results }),
+  setShouldParsePdf: (enabled) => set({ shouldParsePdf: enabled }),
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   pinNode: (nodeId, position) =>
     set((state) => ({
@@ -186,7 +201,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     })),
   setSearchSource: (source) => set({ activeSearchSource: source }),
   setLocalSearchMode: (mode) => set({ activeLocalSearchMode: mode }),
-  importFolder: async () => {
+  importFolder: async (isProject = false) => {
     if (!fileSystemAdapter.isSupported()) {
       set({
         importError: "This browser does not support folder picking yet. Chrome or Edge is recommended for the MVP.",
@@ -211,19 +226,33 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
       const files = await fileSystemAdapter.listFiles(folder);
       const graph = buildFileGraph(folder, files);
+      const state = useWorkspaceStore.getState();
       const textFriendlyExtensions = new Set([
         "ts",
         "tsx",
         "js",
         "jsx",
+        "py",
+        "c",
+        "cpp",
+        "cc",
+        "cxx",
+        "h",
+        "hpp",
+        "cu",
+        "cuh",
         "json",
         "md",
+        "tex",
         "txt",
         "css",
         "html",
         "yml",
         "yaml",
       ]);
+      if (state.shouldParsePdf) {
+        textFriendlyExtensions.add("pdf");
+      }
       const fileContents = Object.fromEntries(
         await Promise.all(
           files.map(async (file) => {
@@ -240,7 +269,24 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
           }),
         ),
       );
-      const enrichedGraph = enrichFileGraphWithContent(graph, fileContents);
+      let enrichedGraph = enrichFileGraphWithContent(graph, fileContents);
+
+      if (isProject) {
+        // Parse code files
+        const parser = new SimpleCodeParserAdapter();
+        const parsedModules: Record<string, ParsedModule> = {};
+        
+        for (const file of files) {
+          if (parser.supports(file.path)) {
+            const content = fileContents[file.path];
+            if (content) {
+              parsedModules[file.path] = await parser.parseModule(file.path, content);
+            }
+          }
+        }
+
+        enrichedGraph = enrichFileGraphWithCodeStructure(enrichedGraph, parsedModules);
+      }
 
       set({
         baseGraph: enrichedGraph,
@@ -264,12 +310,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       return;
     }
 
+    const state = useWorkspaceStore.getState();
     const nextRequest: SearchRequest = {
       ...request,
       query: trimmed,
+      maxResults: request.maxResults ?? state.searchMaxResults,
     };
 
-    const state = useWorkspaceStore.getState();
     try {
       const next = await buildInteractiveSearchGraph(
         request.baseNodeId ? state.graph : state.baseGraph,

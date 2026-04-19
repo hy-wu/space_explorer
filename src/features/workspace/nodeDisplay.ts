@@ -13,6 +13,19 @@ function fileIcon(extension: string | undefined): string {
     case "js":
     case "jsx":
       return "🟨";
+    case "py":
+      return "🐍";
+    case "c":
+    case "cpp":
+    case "cc":
+    case "cxx":
+      return "⚙️";
+    case "h":
+    case "hpp":
+      return "📜";
+    case "cu":
+    case "cuh":
+      return "🧪";
     case "json":
       return "🧩";
     case "md":
@@ -40,8 +53,25 @@ export function getNodeIcon(node: GraphNode): string {
       return "📚";
     case "tutorial":
       return "🎓";
-    case "symbol":
-      return "🔹";
+    case "symbol": {
+      const symbolKind = String(node.meta.kind || "");
+      switch (symbolKind) {
+        case "class":
+          return "📦";
+        case "interface":
+          return "🔌";
+        case "function":
+          return "ƒ";
+        case "variable":
+          return "𝑥";
+        case "type":
+          return "🏷️";
+        case "module":
+          return "📦";
+        default:
+          return "🔹";
+      }
+    }
     case "search_query":
       return "🔍";
     case "local_search_result":

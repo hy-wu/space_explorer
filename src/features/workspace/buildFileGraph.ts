@@ -1,11 +1,22 @@
 import type { GraphData, GraphEdge, GraphNode } from "@/domain/graph";
 import type { FileEntry, FolderHandle } from "@/infrastructure/fs/fileSystemAdapter";
+import type { ParsedModule } from "@/infrastructure/parser/codeParserAdapter";
 
 const extensionTags: Record<string, string[]> = {
   ts: ["typescript", "code"],
   tsx: ["typescript", "react", "code"],
   js: ["javascript", "code"],
   jsx: ["javascript", "react", "code"],
+  py: ["python", "code"],
+  c: ["c", "code"],
+  cpp: ["cpp", "code"],
+  cc: ["cpp", "code"],
+  cxx: ["cpp", "code"],
+  h: ["cpp", "header", "code"],
+  hpp: ["cpp", "header", "code"],
+  cu: ["cuda", "nvidia", "code"],
+  cuh: ["cuda", "header", "code"],
+  tex: ["latex", "note"],
   md: ["markdown", "note"],
   json: ["json", "data"],
   css: ["style"],
@@ -205,4 +216,125 @@ export function enrichFileGraphWithContent(
       };
     }),
   };
+}
+
+function resolveImportPath(basePath: string, importPath: string): string | null {
+  if (!importPath.startsWith(".")) return null;
+  const baseParts = basePath.split("/");
+  baseParts.pop(); // remove filename
+  const importParts = importPath.split("/");
+  for (const part of importParts) {
+    if (part === ".") continue;
+    if (part === "..") baseParts.pop();
+    else baseParts.push(part);
+  }
+  return baseParts.join("/");
+}
+
+export function enrichFileGraphWithCodeStructure(
+  graph: GraphData,
+  parsedModules: Record<string, ParsedModule>,
+): GraphData {
+  const newNodes: GraphNode[] = [...graph.nodes];
+  const newEdges: GraphEdge[] = [...graph.edges];
+  
+  // 1. Build lookup maps
+  const filePaths = new Map<string, string>(); // path (no ext) -> nodeId
+  const symbolMap = new Map<string, string>(); // symbolName -> symbolNodeId
+  
+  for (const node of graph.nodes) {
+    if (node.kind === "file" && typeof node.meta.path === "string") {
+      const withoutExt = node.meta.path.replace(/\.[^/.]+$/, "");
+      filePaths.set(withoutExt, node.id);
+      filePaths.set(node.meta.path, node.id);
+    }
+  }
+
+  // 2. Add symbol nodes and fill symbolMap
+  for (const [filePath, parsed] of Object.entries(parsedModules)) {
+    const fileNodeId = makeId("file", filePath);
+    
+    for (const symbol of parsed.symbols) {
+      const symbolNodeId = makeId("symbol", symbol.id);
+      symbolMap.set(symbol.name, symbolNodeId); // Global index for simple name lookup
+
+      newNodes.push({
+        id: symbolNodeId,
+        kind: "symbol",
+        title: symbol.name,
+        uri: symbol.id,
+        tags: ["code", "symbol", symbol.kind],
+        meta: { kind: symbol.kind, exported: symbol.exported, filePath },
+        position: { x: 0, y: 0, z: 0 },
+      });
+
+      newEdges.push({
+        id: `edge-defines-${fileNodeId}-${symbolNodeId}`,
+        source: fileNodeId,
+        target: symbolNodeId,
+        kind: "defines",
+        directed: true,
+        meta: {},
+        weight: 0.5,
+      });
+    }
+  }
+
+  // 3. Add relationship edges (Imports & References)
+  for (const [filePath, parsed] of Object.entries(parsedModules)) {
+    const fileNodeId = makeId("file", filePath);
+
+    // File-to-File Imports
+    for (const importPath of parsed.imports) {
+      let targetFileNodeId: string | undefined;
+
+      if (importPath.startsWith(".")) {
+        const resolvedPath = resolveImportPath(filePath, importPath);
+        if (resolvedPath) {
+          targetFileNodeId = filePaths.get(resolvedPath) || filePaths.get(resolvedPath + "/index");
+        }
+      } else {
+        targetFileNodeId = filePaths.get(importPath) || filePaths.get(importPath + "/__init__");
+        if (!targetFileNodeId) {
+          for (const [knownPath, nodeId] of filePaths.entries()) {
+            if (knownPath.endsWith(`/${importPath}`) || knownPath.endsWith(`/${importPath}/__init__`)) {
+              targetFileNodeId = nodeId;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (targetFileNodeId) {
+        newEdges.push({
+          id: `edge-imports-${fileNodeId}-${targetFileNodeId}`,
+          source: fileNodeId,
+          target: targetFileNodeId,
+          kind: "imports",
+          directed: true,
+          meta: {},
+          weight: 0.2,
+        });
+      }
+    }
+
+    // Precise Symbol-to-Symbol References
+    const refs = parsed.references || [];
+    for (const refName of refs) {
+      const targetSymbolId = symbolMap.get(refName);
+      if (targetSymbolId) {
+        newEdges.push({
+          id: `edge-ref-${fileNodeId}-${targetSymbolId}-${Math.random().toString(36).substr(2, 4)}`,
+          source: fileNodeId,
+          target: targetSymbolId,
+          kind: "references",
+          directed: true,
+          meta: {},
+          weight: 0.5,
+        });
+      }
+    }
+  }
+
+  return { nodes: newNodes, edges: newEdges };
 }

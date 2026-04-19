@@ -44,8 +44,16 @@ export function InspectorPanel({ selectedNodeId }: InspectorPanelProps) {
           <dt>Score</dt>
           <dd>{node.score ?? "n/a"}</dd>
         </div>
-      <pre className="json-card">{JSON.stringify(node.meta, null, 2)}</pre>
       </dl>
+
+      {typeof node.meta.explanation === "string" && (
+        <div style={{ marginTop: "16px", padding: "12px", background: "#1e293b", borderRadius: "8px", borderLeft: "4px solid #10b981" }}>
+          <p style={{ fontSize: "0.75em", fontWeight: "bold", textTransform: "uppercase", color: "#64748b", marginBottom: "4px" }}>Match Explanation</p>
+          <p style={{ fontSize: "0.9em", color: "#e2e8f0", whiteSpace: "pre-wrap", margin: 0 }}>{node.meta.explanation}</p>
+        </div>
+      )}
+
+      <pre className="json-card">{JSON.stringify(node.meta, null, 2)}</pre>
     </section>
   );
 }
